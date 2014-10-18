@@ -5,9 +5,7 @@ var request = require('request'),
     async = require('async'),
     config = require('./config'),
     mongoose = require('mongoose'),
-    itemModel = require('models/Item');
-
-mongoose.connect(config.db);
+    itemModel = require('./models/Item');
 
 function requestLogin(callback) {
     var form = {
@@ -38,7 +36,7 @@ function requestLogin(callback) {
 
 function requestData(params, callback) {
     return request({
-        url: config.urlEndPoint + 'portal.php?c=' + (params.page * 10),
+        url: config.urlEndPoint + 'portal.php?c=10&start=' + params.page,
         headers: {
             'User-Agent': config.userAgent
         },
@@ -73,7 +71,7 @@ function fixValue(value) {
     var record = {};
 
     // title
-    record['title'] = value[0].replace(/(DVDRip|\[Line\]|HDRip|BDRip|WEB-DLRip|WEBRip|\[H\.264\]|DVBRip|AVO|TVRip|\[VO\]|\[Unrated\]|\[1080p\]|\[720p\])+/gmi, '').trim();
+    record['title'] = value[0].replace(/(\[.*?\]|VHSRip|WEB-DL|HD|DVDRip|HDRip|BDRip|WEB-DLRip|WEBRip|DVBRip|AVO|TVRip|Rip)+/gmi, '').trim();
 
     // get year
     var re = /\([0-9]+\)/gm;
@@ -95,40 +93,52 @@ function fixValue(value) {
     return record;
 }
 
-requestLogin(function (status) {
-    if (status) {
-        var params = {
-            page: 0
-        };
-        requestData(params, function (data) {
-            var films = [];
-            data = iconv.decode(data, 'cp1251');
+function prepareData(data) {
+    var films = [];
+    data = iconv.decode(data, 'cp1251');
 
-            var re = /<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/><b>Жанр<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>/gm;
-            data = data.replace(/(\n|\r|\t|\s)+/gm, ' ');
+    var re = /<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/><b>Жанр<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>/gm;
+    data = data.replace(/(\n|\r|\t|\s)+/gm, ' ');
 
-            var value;
-            while ((value = re.exec(data)) !== null) {
-                films.push(fixValue(value.splice(1, 6)));
-            }
-
-            async.mapSeries(films, function (film, callback) {
-                return getMagnet(film, callback);
-            }, function () {
-                for (var i = 0; i < films.length; i++) {
-                    var film = films[i];
-                    var item = new itemModel({
-                        title: film.title,
-                        description: film.description,
-                        time: film.time,
-                        link: film.link,
-                        year: film.year
-                    });
-                    item.save();
-                }
-            });
-        });
+    var value;
+    while ((value = re.exec(data)) !== null) {
+        films.push(fixValue(value.splice(1, 6)));
     }
+
+    async.mapSeries(films, function (film, callback) {
+        return getMagnet(film, callback);
+    }, function () {
+        for (var i = 0; i < films.length; i++) {
+            var film = films[i];
+            var item = new itemModel({
+                title: film.title,
+                description: film.description,
+                time: film.time,
+                link: film.link,
+                year: film.year
+            });
+            item.save();
+            console.log(film.title);
+        }
+    });
+}
+
+mongoose.connect(config.db);
+var db = mongoose.connection;
+var total = 100;
+
+db.on('error', console.error.bind(console, 'connection error:'));
+db.once('open', function () {
+    requestLogin(function (status) {
+        if (status) {
+            for (var page = 0; page < total; page += 15) {
+                var params = {
+                    page: page
+                };
+                requestData(params, prepareData);
+            }
+        }
+    });
 });
 
-mongoose.disconnect();
+// mongoose.disconnect();
