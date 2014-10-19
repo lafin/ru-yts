@@ -61,8 +61,9 @@ function getMagnet(film, callback) {
         }
         var metadata = bencode.decode(body),
             sha1 = new Rusha();
-        film['link'] = sha1.digest(bencode.encode(metadata.info));
-        film['link'] = 'magnet:?xt=urn:btih:' + film['link'] + '&dn=' + metadata.info.name;
+        film['hash'] = sha1.digest(bencode.encode(metadata.info));
+        film['size'] = metadata.info.length;
+        film['link'] = 'magnet:?xt=urn:btih:' + film['hash'] + '&dn=' + metadata.info.name;
         return callback(null, film);
     });
 }
@@ -77,8 +78,14 @@ function fixValue(value) {
     var re = /\([0-9]+\)/gm;
     record['year'] = re.exec(value[0])[0].substr(1, 4);
 
+    // cover image
+    record['image'] = value[1];
+
     // description
     record['description'] = value[2].replace(/&nbsp;\(<a href=".*?"> Читать дальше... <\/a>\)/gm, '.').replace(/&quot;/gm, '"');
+
+    // genre
+    record['genre'] = value[3].split(', ');
 
     // time
     record['time'] = value[4].split(':').splice(0, 2).map(function (item, index) {
@@ -114,6 +121,10 @@ function prepareData(data) {
                 title: film.title,
                 description: film.description,
                 time: film.time,
+                genre: film.genre,
+                image: film.image,
+                size: film.size,
+                hash: film.hash,
                 link: film.link,
                 year: film.year
             });

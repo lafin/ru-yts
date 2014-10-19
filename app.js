@@ -4,45 +4,59 @@
  */
 
 var express = require('express'),
-    bodyParser = require('body-parser'),
+    // bodyParser = require('body-parser'),
+    config = require('./config'),
+    mongoose = require('mongoose'),
+    itemModel = require('./models/Item'),
     app = express();
 
-app.use(bodyParser.urlencoded({
-    extended: true
-}));
+mongoose.connect(config.db);
+
+// app.use(bodyParser.urlencoded({
+//     extended: true
+// }));
 
 app.get('/api/list.json', function (req, res) {
     var params = req.query;
-    var response = {
-        'MovieID': null,
-        'State': null,
-        'MovieUrl': null,
-        'MovieTitle': null,
-        'MovieTitleClean': null,
-        'MovieYear': null,
-        'AgeRating': null,
-        'DateUploaded': null,
-        'DateUploadedEpoch': null,
-        'Quality': null,
-        'CoverImage': null,
-        'ImdbCode': null,
-        'ImdbLink': null,
-        'Size': null,
-        'SizeByte': null,
-        'MovieRating': null,
-        'Genre': null,
-        'Uploader': null,
-        'UploaderUID': null,
-        'TorrentSeeds': null,
-        'Downloaded': null,
-        'TorrentPeers': null,
-        'TorrentUrl': null,
-        'TorrentHash': null,
-        'TorrentMagnetUrl': null
-    };
-    return res.json({
-        'MovieCount': 10,
-        'MovieList': []
+    itemModel.find(function (err, items) {
+        if (err) {
+            return console.error(err);
+        }
+        var list = [];
+        for (var i = 0; i < items; i++) {
+            var item = items[i];
+            list.push({
+                'MovieID': null,
+                'State': 'OK',
+                'MovieUrl': null,
+                'MovieTitle': item.title,
+                'MovieTitleClean': item.title,
+                'MovieYear': item.year,
+                'AgeRating': null,
+                'DateUploaded': null,
+                'DateUploadedEpoch': null,
+                'Quality': null,
+                'CoverImage': item.image,
+                'ImdbCode': null,
+                'ImdbLink': null,
+                'Size': (item.size / 1024 / 1024) + 'Mb',
+                'SizeByte': item.size,
+                'MovieRating': null,
+                'Genre': item.genre,
+                'Uploader': null,
+                'UploaderUID': null,
+                'TorrentSeeds': null,
+                'Downloaded': null,
+                'TorrentPeers': null,
+                'TorrentUrl': item.link,
+                'TorrentHash': item.hash,
+                'TorrentMagnetUrl': item.link
+            });
+        }
+        return res.json({
+            'MovieCount': list.length,
+            'MovieList': list
+        });
     });
 });
 

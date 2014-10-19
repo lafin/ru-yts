@@ -13,6 +13,19 @@ var itemSchema = new mongoose.Schema({
     link: {
         type: String
     },
+    size: {
+        type: Number
+    },
+    hash: {
+        type: String,
+        unique: true
+    },
+    image: {
+        type: String
+    },
+    genre: {
+        type: String
+    },
     year: {
         type: Number
     }
