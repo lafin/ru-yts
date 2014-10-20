@@ -126,10 +126,10 @@ function prepareData(data) {
                 size: film.size,
                 hash: film.hash,
                 link: film.link,
-                year: film.year
+                year: film.year,
+                movieId: film.movieId
             });
             item.save();
-            console.log(film.title);
         }
     });
 }

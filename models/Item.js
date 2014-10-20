@@ -13,6 +13,9 @@ var itemSchema = new mongoose.Schema({
     link: {
         type: String
     },
+    movieId: {
+        type: String
+    },
     size: {
         type: Number
     },

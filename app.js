@@ -4,7 +4,6 @@
  */
 
 var express = require('express'),
-    // bodyParser = require('body-parser'),
     config = require('./config'),
     mongoose = require('mongoose'),
     itemModel = require('./models/Item'),
@@ -12,9 +11,40 @@ var express = require('express'),
 
 mongoose.connect(config.db);
 
-// app.use(bodyParser.urlencoded({
-//     extended: true
-// }));
+app.use(function (req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*');
+    next();
+});
+
+function templateRecord(item) {
+    return {
+        'MovieID': item.movieId,
+        'State': 'OK',
+        'MovieUrl': '',
+        'MovieTitle': item.title,
+        'MovieTitleClean': item.title,
+        'MovieYear': item.year,
+        'AgeRating': '',
+        'DateUploaded': '',
+        'DateUploadedEpoch': Date.now(),
+        'Quality': 'HDRip',
+        'CoverImage': item.image,
+        'ImdbCode': item.hash,
+        'ImdbLink': '',
+        'Size': parseInt(item.size / 1024 / 1024, 10) + ' Mb',
+        'SizeByte': item.size + '',
+        'MovieRating': '',
+        'Genre': item.genre,
+        'Uploader': '',
+        'UploaderUID': '',
+        'TorrentSeeds': '',
+        'Downloaded': '',
+        'TorrentPeers': '',
+        'TorrentUrl': item.link,
+        'TorrentHash': item.hash,
+        'TorrentMagnetUrl': item.link
+    };
+}
 
 app.get('/api/list.json', function (req, res) {
     var params = req.query;
@@ -22,37 +52,15 @@ app.get('/api/list.json', function (req, res) {
         if (err) {
             return console.error(err);
         }
-        var list = [];
-        for (var i = 0; i < items; i++) {
+
+        var list = [],
+            limit = params.limit || 20;
+
+        for (var i = 0; i < limit; i++) {
             var item = items[i];
-            list.push({
-                'MovieID': null,
-                'State': 'OK',
-                'MovieUrl': null,
-                'MovieTitle': item.title,
-                'MovieTitleClean': item.title,
-                'MovieYear': item.year,
-                'AgeRating': null,
-                'DateUploaded': null,
-                'DateUploadedEpoch': null,
-                'Quality': null,
-                'CoverImage': item.image,
-                'ImdbCode': null,
-                'ImdbLink': null,
-                'Size': (item.size / 1024 / 1024) + 'Mb',
-                'SizeByte': item.size,
-                'MovieRating': null,
-                'Genre': item.genre,
-                'Uploader': null,
-                'UploaderUID': null,
-                'TorrentSeeds': null,
-                'Downloaded': null,
-                'TorrentPeers': null,
-                'TorrentUrl': item.link,
-                'TorrentHash': item.hash,
-                'TorrentMagnetUrl': item.link
-            });
+            list.push(templateRecord(item));
         }
+
         return res.json({
             'MovieCount': list.length,
             'MovieList': list
@@ -62,9 +70,24 @@ app.get('/api/list.json', function (req, res) {
 
 app.get('/api/listimdb.json', function (req, res) {
     var params = req.query;
-    return res.json({
-        'MovieCount': 10,
-        'MovieList': []
+    itemModel.findOne({
+        'movieId': params.imdb_id
+    }, function (err, items) {
+        if (err) {
+            return console.error(err);
+        }
+
+        var list = [];
+
+        for (var i = 0; i < 1; i++) {
+            var item = items[i];
+            list.push(templateRecord(item));
+        }
+
+        return res.json({
+            'MovieCount': list.length,
+            'MovieList': list
+        });
     });
 });
 
