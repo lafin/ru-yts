@@ -29,7 +29,7 @@ function templateRecord(item) {
         'DateUploadedEpoch': Date.now(),
         'Quality': 'HDRip',
         'CoverImage': item.image,
-        'ImdbCode': item.hash,
+        'ImdbCode': item.movieId,
         'ImdbLink': '',
         'Size': parseInt(item.size / 1024 / 1024, 10) + ' Mb',
         'SizeByte': item.size + '',
@@ -47,15 +47,15 @@ function templateRecord(item) {
 }
 
 app.get('/api/list.json', function (req, res) {
-    var params = req.query;
+    var params = req.query,
+        limit = params.limit || 20,
+        page = params.set || 1;
     itemModel.find(function (err, items) {
         if (err) {
             return console.error(err);
         }
 
-        var list = [],
-            limit = params.limit || 20;
-
+        var list = [];
         for (var i = 0; i < limit; i++) {
             var item = items[i];
             list.push(templateRecord(item));
@@ -65,12 +65,12 @@ app.get('/api/list.json', function (req, res) {
             'MovieCount': list.length,
             'MovieList': list
         });
-    });
+    }).skip(limit * (page - 1)).limit(limit * page);
 });
 
 app.get('/api/listimdb.json', function (req, res) {
     var params = req.query;
-    itemModel.findOne({
+    itemModel.find({
         'movieId': params.imdb_id
     }, function (err, items) {
         if (err) {
@@ -78,8 +78,7 @@ app.get('/api/listimdb.json', function (req, res) {
         }
 
         var list = [];
-
-        for (var i = 0; i < 1; i++) {
+        for (var i = 0; i < items.length; i++) {
             var item = items[i];
             list.push(templateRecord(item));
         }

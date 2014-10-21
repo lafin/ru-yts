@@ -1,10 +1,10 @@
 var request = require('request'),
     bencode = require('bencode'),
     iconv = require('iconv-lite'),
-    Rusha = require('rusha'),
     async = require('async'),
     config = require('./config'),
     mongoose = require('mongoose'),
+    crypto = require('crypto'),
     itemModel = require('./models/Item');
 
 function requestLogin(callback) {
@@ -60,8 +60,11 @@ function getMagnet(film, callback) {
             return callback(error);
         }
         var metadata = bencode.decode(body),
-            sha1 = new Rusha();
-        film['hash'] = sha1.digest(bencode.encode(metadata.info));
+            sha1 = crypto.createHash('sha1');
+
+        sha1.update(bencode.encode(metadata.info));
+
+        film['hash'] = sha1.digest('hex');
         film['size'] = metadata.info.length;
         film['link'] = 'magnet:?xt=urn:btih:' + film['hash'] + '&dn=' + metadata.info.name;
         return callback(null, film);
@@ -76,7 +79,8 @@ function fixValue(value) {
 
     // get year
     var re = /\([0-9]+\)/gm;
-    record['year'] = re.exec(value[0])[0].substr(1, 4);
+    re = re.exec(value[0]);
+    record['year'] = re ? re[0].substr(1, 4) : '';
 
     // cover image
     record['image'] = value[1];
@@ -109,7 +113,10 @@ function prepareData(data) {
 
     var value;
     while ((value = re.exec(data)) !== null) {
-        films.push(fixValue(value.splice(1, 6)));
+        value = fixValue(value.splice(1, 6));
+        if (value) {
+            films.push(value);
+        }
     }
 
     async.mapSeries(films, function (film, callback) {
@@ -117,6 +124,8 @@ function prepareData(data) {
     }, function () {
         for (var i = 0; i < films.length; i++) {
             var film = films[i];
+            var md5 = crypto.createHash('md5');
+            md5.update(film.title);
             var item = new itemModel({
                 title: film.title,
                 description: film.description,
@@ -127,7 +136,7 @@ function prepareData(data) {
                 hash: film.hash,
                 link: film.link,
                 year: film.year,
-                movieId: film.movieId
+                movieId: md5.digest('hex')
             });
             item.save();
         }
@@ -136,7 +145,7 @@ function prepareData(data) {
 
 mongoose.connect(config.db);
 var db = mongoose.connection;
-var total = 100;
+var total = 300;
 
 db.on('error', console.error.bind(console, 'connection error:'));
 db.once('open', function () {
