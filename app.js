@@ -7,9 +7,14 @@ var express = require('express'),
     config = require('./config'),
     mongoose = require('mongoose'),
     itemModel = require('./models/Item'),
+    countItems = null,
     app = express();
 
-mongoose.connect(config.db);
+mongoose.connect(config.db, function () {
+    itemModel.count({}, function (err, count) {
+        countItems = count;
+    });
+});
 
 app.use(function (req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
@@ -49,23 +54,29 @@ function templateRecord(item) {
 app.get('/api/list.json', function (req, res) {
     var params = req.query,
         limit = params.limit || 20,
-        page = params.set || 1;
-    itemModel.find(function (err, items) {
-        if (err) {
-            return console.error(err);
-        }
+        page = parseInt(params.set, 10) || 0;
 
-        var list = [];
-        for (var i = 0; i < limit; i++) {
-            var item = items[i];
-            list.push(templateRecord(item));
-        }
+    itemModel.find({}, null, {
+            skip: limit * (page - 1),
+            limit: limit
+        },
+        function (err, items) {
+            if (err) {
+                return console.error(err);
+            }
 
-        return res.json({
-            'MovieCount': list.length,
-            'MovieList': list
+            var list = [],
+                i = null;
+            for (i = 0; i < items.length; i++) {
+                var item = items[i];
+                list.push(templateRecord(item));
+            }
+
+            return res.json({
+                'MovieCount': countItems,
+                'MovieList': list
+            });
         });
-    }).skip(limit * (page - 1)).limit(limit * page);
 });
 
 app.get('/api/listimdb.json', function (req, res) {
@@ -77,14 +88,15 @@ app.get('/api/listimdb.json', function (req, res) {
             return console.error(err);
         }
 
-        var list = [];
-        for (var i = 0; i < items.length; i++) {
+        var list = [],
+            i = null;
+        for (i = 0; i < items.length; i++) {
             var item = items[i];
             list.push(templateRecord(item));
         }
 
         return res.json({
-            'MovieCount': list.length,
+            'MovieCount': countItems,
             'MovieList': list
         });
     });
