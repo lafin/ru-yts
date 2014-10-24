@@ -7,6 +7,16 @@ var request = require('request'),
     crypto = require('crypto'),
     itemModel = require('./models/Item');
 
+mongoose.connect(config.db);
+var db = mongoose.connection;
+
+var total = 100,
+    offset = 15;
+
+function isLastPage(page) {
+    return (page + offset) >= total;
+}
+
 function requestLogin(callback) {
     var form = {
         username: config.username,
@@ -46,7 +56,7 @@ function requestData(params, callback) {
         if (error || body === '') {
             return console.log(error);
         }
-        return callback(body);
+        return callback(body, isLastPage(params.page));
     });
 }
 
@@ -61,7 +71,6 @@ function getMagnet(film, callback) {
         }
         var metadata = bencode.decode(body),
             sha1 = crypto.createHash('sha1');
-
         sha1.update(bencode.encode(metadata.info));
 
         film['hash'] = sha1.digest('hex');
@@ -71,16 +80,16 @@ function getMagnet(film, callback) {
     });
 }
 
-function fixValue(value) {
+function getData(value) {
     var record = {};
 
     // title
-    record['title'] = value[0].replace(/(\[.*?\]|VHSRip|WEB-DL|HD|DVDRip|HDRip|BDRip|WEB-DLRip|WEBRip|DVBRip|AVO|TVRip|Rip)+/gmi, '').trim();
+    record['title'] = value[0].match(/(.*?)\(.*?\)/i)[1].trim();
 
     // get year
-    var re = /\([0-9]+\)/gm;
+    var re = /\(.*?\)/i;
     re = re.exec(value[0]);
-    record['year'] = re ? re[0].substr(1, 4) : '';
+    record['year'] = re ? re[0].replace(/[^\d.]/g, '').substr(0, 4) : '';
 
     // cover image
     record['image'] = value[1];
@@ -104,7 +113,7 @@ function fixValue(value) {
     return record;
 }
 
-function prepareData(data) {
+function prepareData(data, end) {
     var films = [];
     data = iconv.decode(data, 'cp1251');
 
@@ -113,11 +122,17 @@ function prepareData(data) {
 
     var value;
     while ((value = re.exec(data)) !== null) {
-        value = fixValue(value.splice(1, 6));
+        value = getData(value.splice(1, 6));
         if (value) {
             films.push(value);
         }
     }
+
+    var afterSave = function (disconnect) {
+        if (disconnect) {
+            mongoose.disconnect();
+        }
+    };
 
     async.mapSeries(films, function (film, callback) {
         return getMagnet(film, callback);
@@ -138,20 +153,16 @@ function prepareData(data) {
                 year: film.year,
                 movieId: md5.digest('hex')
             });
-            item.save();
+            item.save(afterSave.call(this, (end && films.length === i + 1)));
         }
     });
 }
 
-mongoose.connect(config.db);
-var db = mongoose.connection;
-var total = 300;
-
-db.on('error', console.error.bind(console, 'connection error:'));
+db.on('error', console.error.bind(console, 'error:'));
 db.once('open', function () {
     requestLogin(function (status) {
         if (status) {
-            for (var page = 0; page < total; page += 15) {
+            for (var page = 0; page < total; page += offset) {
                 var params = {
                     page: page
                 };
@@ -160,5 +171,3 @@ db.once('open', function () {
         }
     });
 });
-
-// mongoose.disconnect();

@@ -1,8 +1,3 @@
-/**
- * Api endpoint
- * docs: https://yts.re/api
- */
-
 var express = require('express'),
     config = require('./config'),
     mongoose = require('mongoose'),
@@ -54,9 +49,18 @@ function templateRecord(item) {
 app.get('/api/list.json', function (req, res) {
     var params = req.query,
         limit = params.limit || 20,
-        page = parseInt(params.set, 10) || 0;
+        page = parseInt(params.set, 10) || 0,
+        keywords = params.keywords || false,
+        filter = {};
 
-    itemModel.find({}, null, {
+    if (keywords) {
+        keywords = new RegExp(keywords, 'i');
+        filter = {
+            title: keywords
+        };
+    }
+
+    itemModel.find(filter, null, {
             skip: limit * (page - 1),
             limit: limit
         },
