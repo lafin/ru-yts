@@ -4,33 +4,32 @@ var itemSchema = new mongoose.Schema({
     title: {
         type: String
     },
-    description: {
-        type: String
-    },
-    time: {
-        type: Number
-    },
-    link: {
-        type: String
-    },
-    movieId: {
-        type: String
-    },
-    size: {
-        type: Number
-    },
     hash: {
         type: String,
         unique: true
     },
-    image: {
-        type: String
-    },
-    genre: {
-        type: String
-    },
-    year: {
-        type: Number
+    info: {
+        description: {
+            type: String
+        },
+        time: {
+            type: Number
+        },
+        magnet: {
+            type: String
+        },
+        size: {
+            type: Number
+        },
+        cover: {
+            type: String
+        },
+        genre: {
+            type: String
+        },
+        year: {
+            type: Number
+        }
     }
 });
 

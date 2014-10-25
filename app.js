@@ -2,11 +2,25 @@ var express = require('express'),
     config = require('./config'),
     mongoose = require('mongoose'),
     itemModel = require('./models/Item'),
-    countItems = null,
-    app = express();
+    Logme = require('logme').Logme,
+    fs = require('fs');
+
+var app = express(),
+    countItems = null;
+
+var logFile = fs.createWriteStream(__dirname + '/log.txt', {
+        flags: 'a'
+    }),
+    logger = new Logme({
+        stream: logFile,
+        theme: 'clean'
+    });
 
 mongoose.connect(config.db, function () {
-    itemModel.count({}, function (err, count) {
+    return itemModel.count({}, function (error, count) {
+        if (error) {
+            return logger.error(error);
+        }
         countItems = count;
     });
 });
@@ -16,57 +30,56 @@ app.use(function (req, res, next) {
     next();
 });
 
-function templateRecord(item) {
+var templateRecord = function (item) {
+    var info = item.info;
     return {
-        'MovieID': item.movieId,
+        'MovieID': item.hash,
         'State': 'OK',
         'MovieUrl': '',
         'MovieTitle': item.title,
         'MovieTitleClean': item.title,
-        'MovieYear': item.year,
+        'MovieYear': info.year,
         'AgeRating': '',
         'DateUploaded': '',
         'DateUploadedEpoch': Date.now(),
         'Quality': 'HDRip',
-        'CoverImage': item.image,
-        'ImdbCode': item.movieId,
+        'CoverImage': info.cover,
+        'ImdbCode': item.hash,
         'ImdbLink': '',
-        'Size': parseInt(item.size / 1024 / 1024, 10) + ' Mb',
-        'SizeByte': item.size + '',
+        'Size': parseInt(info.size / 1024 / 1024, 10) + ' Mb',
+        'SizeByte': info.size + '',
         'MovieRating': '',
-        'Genre': item.genre,
+        'Genre': info.genre,
         'Uploader': '',
         'UploaderUID': '',
         'TorrentSeeds': '',
         'Downloaded': '',
         'TorrentPeers': '',
-        'TorrentUrl': item.link,
+        'TorrentUrl': info.magnet,
         'TorrentHash': item.hash,
-        'TorrentMagnetUrl': item.link
+        'TorrentMagnetUrl': info.magnet
     };
-}
+};
 
 app.get('/api/list.json', function (req, res) {
     var params = req.query,
         limit = params.limit || 20,
-        page = parseInt(params.set, 10) || 0,
+        page = params.set || 1,
         keywords = params.keywords || false,
         filter = {};
-
     if (keywords) {
         keywords = new RegExp(keywords, 'i');
         filter = {
             title: keywords
         };
     }
-
-    itemModel.find(filter, null, {
+    return itemModel.find(filter, null, {
             skip: limit * (page - 1),
             limit: limit
         },
-        function (err, items) {
-            if (err) {
-                return console.error(err);
+        function (error, items) {
+            if (error) {
+                return logger.error(error);
             }
 
             var list = [],
@@ -85,11 +98,11 @@ app.get('/api/list.json', function (req, res) {
 
 app.get('/api/listimdb.json', function (req, res) {
     var params = req.query;
-    itemModel.find({
-        'movieId': params.imdb_id
-    }, function (err, items) {
-        if (err) {
-            return console.error(err);
+    return itemModel.find({
+        'hash': params.imdb_id
+    }, function (error, items) {
+        if (error) {
+            return logger.error(error);
         }
 
         var list = [],

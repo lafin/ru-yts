@@ -5,13 +5,23 @@ var request = require('request'),
     config = require('./config'),
     mongoose = require('mongoose'),
     crypto = require('crypto'),
-    itemModel = require('./models/Item');
+    itemModel = require('./models/Item'),
+    Logme = require('logme').Logme,
+    fs = require('fs');
 
 mongoose.connect(config.db);
 var db = mongoose.connection;
 
 var total = 100,
     offset = 15;
+
+var logFile = fs.createWriteStream(__dirname + '/log.txt', {
+        flags: 'a'
+    }),
+    logger = new Logme({
+        stream: logFile,
+        theme: 'clean'
+    });
 
 function isLastPage(page) {
     return (page + offset) >= total;
@@ -36,11 +46,11 @@ function requestLogin(callback) {
         jar: true,
         followAllRedirects: true,
         encoding: null
-    }, function (error, response, body) {
-        if (error || body === '') {
-            return callback(false, error);
+    }, function (error) {
+        if (error) {
+            return callback(error);
         }
-        return callback(true);
+        return callback(null, true);
     });
 }
 
@@ -53,21 +63,21 @@ function requestData(params, callback) {
         jar: true,
         encoding: null
     }, function (error, response, body) {
-        if (error || body === '') {
-            return console.log(error);
+        if (error) {
+            return callback(error);
         }
-        return callback(body, isLastPage(params.page));
+        return callback(null, body, isLastPage(params.page));
     });
 }
 
 function getMagnet(film, callback) {
-    request({
-        url: config.urlEndPoint + film['link'],
+    return request({
+        url: config.urlEndPoint + film['magnet'],
         jar: true,
         encoding: null
     }, function (error, response, body) {
-        if (error || body === '') {
-            return callback(error);
+        if (error) {
+            throw error;
         }
         var metadata = bencode.decode(body),
             sha1 = crypto.createHash('sha1');
@@ -75,7 +85,7 @@ function getMagnet(film, callback) {
 
         film['hash'] = sha1.digest('hex');
         film['size'] = metadata.info.length;
-        film['link'] = 'magnet:?xt=urn:btih:' + film['hash'] + '&dn=' + metadata.info.name;
+        film['magnet'] = 'magnet:?xt=urn:btih:' + film['hash'] + '&dn=' + metadata.info.name;
         return callback(null, film);
     });
 }
@@ -91,8 +101,7 @@ function getData(value) {
     re = re.exec(value[0]);
     record['year'] = re ? re[0].replace(/[^\d.]/g, '').substr(0, 4) : '';
 
-    // cover image
-    record['image'] = value[1];
+    record['cover'] = value[1];
 
     // description
     record['description'] = value[2].replace(/&nbsp;\(<a href=".*?"> Читать дальше... <\/a>\)/gm, '.').replace(/&quot;/gm, '"');
@@ -107,13 +116,16 @@ function getData(value) {
         return previousValue + currentValue;
     });
 
-    // link
-    record['link'] = value[5];
+    // magnet
+    record['magnet'] = value[5];
 
     return record;
 }
 
-function prepareData(data, end) {
+function prepareData(error, data, end) {
+    if (error) {
+        throw error;
+    }
     var films = [];
     data = iconv.decode(data, 'cp1251');
 
@@ -139,35 +151,44 @@ function prepareData(data, end) {
     }, function () {
         for (var i = 0; i < films.length; i++) {
             var film = films[i];
-            var md5 = crypto.createHash('md5');
-            md5.update(film.title);
             var item = new itemModel({
                 title: film.title,
-                description: film.description,
-                time: film.time,
-                genre: film.genre,
-                image: film.image,
-                size: film.size,
                 hash: film.hash,
-                link: film.link,
-                year: film.year,
-                movieId: md5.digest('hex')
+                info: {
+                    description: film.description,
+                    time: film.time,
+                    genre: film.genre,
+                    cover: film.cover,
+                    size: film.size,
+                    magnet: film.magnet,
+                    year: film.year
+                }
             });
             item.save(afterSave.call(this, (end && films.length === i + 1)));
         }
     });
 }
 
-db.on('error', console.error.bind(console, 'error:'));
+db.on('error', function (e) {
+    logger.error(e.message);
+});
+
 db.once('open', function () {
-    requestLogin(function (status) {
-        if (status) {
-            for (var page = 0; page < total; page += offset) {
-                var params = {
-                    page: page
-                };
-                requestData(params, prepareData);
+    try {
+        requestLogin(function (error, status) {
+            if (error) {
+                throw error;
             }
-        }
-    });
+            if (status) {
+                for (var page = 0; page < total; page += offset) {
+                    var params = {
+                        page: page
+                    };
+                    requestData(params, prepareData);
+                }
+            }
+        });
+    } catch (e) {
+        logger.error(e.message);
+    }
 });
