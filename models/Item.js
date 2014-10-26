@@ -2,11 +2,11 @@ var mongoose = require('mongoose');
 
 var itemSchema = new mongoose.Schema({
     title: {
-        type: String
-    },
-    hash: {
         type: String,
         unique: true
+    },
+    hash: {
+        type: String
     },
     info: {
         description: {

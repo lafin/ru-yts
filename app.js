@@ -3,10 +3,25 @@ var express = require('express'),
     mongoose = require('mongoose'),
     itemModel = require('./models/Item'),
     Logme = require('logme').Logme,
-    fs = require('fs');
+    fs = require('fs'),
+    path = require('path');
+
 
 var app = express(),
     countItems = null;
+
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+var hour = 3600000,
+    day = hour * 24,
+    week = day * 7;
+app.use(express['static'](path.join(__dirname, 'public'), {
+    maxAge: week
+}));
+app.use(function (req, res, next) {
+    res.header('Access-Control-Allow-Origin', '*');
+    next();
+});
 
 var logFile = fs.createWriteStream(__dirname + '/log.txt', {
         flags: 'a'
@@ -23,11 +38,6 @@ mongoose.connect(config.db, function () {
         }
         countItems = count;
     });
-});
-
-app.use(function (req, res, next) {
-    res.header('Access-Control-Allow-Origin', '*');
-    next();
 });
 
 var templateRecord = function (item) {
@@ -60,6 +70,12 @@ var templateRecord = function (item) {
         'TorrentMagnetUrl': info.magnet
     };
 };
+
+app.get('/', function (req, res) {
+    return res.render('index', {
+        count: countItems
+    });
+});
 
 app.get('/api/list.json', function (req, res) {
     var params = req.query,
