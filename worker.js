@@ -2,6 +2,7 @@ var request = require('request'),
     bencode = require('bencode'),
     iconv = require('iconv-lite'),
     async = require('async'),
+    // config = require('./secret'),
     config = require('./config'),
     mongoose = require('mongoose'),
     crypto = require('crypto'),
@@ -12,7 +13,7 @@ var request = require('request'),
 mongoose.connect(config.db);
 var db = mongoose.connection;
 
-var total = 100,
+var total = config.total,
     offset = 15;
 
 var logFile = fs.createWriteStream(__dirname + '/log.txt', {
@@ -129,7 +130,7 @@ function prepareData(error, data, end) {
     var films = [];
     data = iconv.decode(data, 'cp1251');
 
-    var re = /<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/><b>Жанр<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>/gm;
+    var re = /<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/><b>Жанр[ы]?<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>/gm;
     data = data.replace(/(\n|\r|\t|\s)+/gm, ' ');
 
     var value;
