@@ -173,7 +173,7 @@ db.on('error', function (e) {
     logger.error(e.message);
 });
 
-db.on('open', function () {
+db.once('open', function () {
     try {
         requestLogin(function (error, status) {
             if (error) {
