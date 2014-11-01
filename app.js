@@ -4,11 +4,10 @@ var express = require('express'),
     itemModel = require('./models/Item'),
     Logme = require('logme').Logme,
     fs = require('fs'),
-    path = require('path');
+    path = require('path'),
+    morgan = require('morgan');
 
-
-var app = express(),
-    countItems = null;
+var app = express();
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -31,14 +30,11 @@ var logFile = fs.createWriteStream(__dirname + '/log.txt', {
         theme: 'clean'
     });
 
-mongoose.connect(config.db, function () {
-    return itemModel.count({}, function (error, count) {
-        if (error) {
-            return logger.error(error);
-        }
-        countItems = count;
-    });
-});
+app.use(morgan('combined', {
+    stream: logFile
+}));
+
+mongoose.connect(config.db);
 
 var templateRecord = function (item) {
     var info = item.info;
@@ -72,8 +68,13 @@ var templateRecord = function (item) {
 };
 
 app.get('/', function (req, res) {
-    return res.render('index', {
-        count: countItems
+    itemModel.count({}, function (error, count) {
+        if (error) {
+            return logger.error(error);
+        }
+        return res.render('index', {
+            count: count
+        });
     });
 });
 
@@ -106,7 +107,7 @@ app.get('/api/list.json', function (req, res) {
             }
 
             return res.json({
-                'MovieCount': countItems,
+                'MovieCount': items.length,
                 'MovieList': list
             });
         });
@@ -129,7 +130,7 @@ app.get('/api/listimdb.json', function (req, res) {
         }
 
         return res.json({
-            'MovieCount': countItems,
+            'MovieCount': items.length,
             'MovieList': list
         });
     });

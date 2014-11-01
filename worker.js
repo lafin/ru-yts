@@ -13,7 +13,7 @@ var request = require('request'),
 mongoose.connect(config.db);
 var db = mongoose.connection;
 
-var total = config.total,
+var total = process.argv[2] || config.total,
     offset = 15;
 
 var logFile = fs.createWriteStream(__dirname + '/log.txt', {
