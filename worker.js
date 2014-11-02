@@ -108,7 +108,7 @@ function getData(value) {
     record['description'] = value[2].replace(/&nbsp;\(<a href=".*?"> Читать дальше... <\/a>\)/gm, '.').replace(/&quot;/gm, '"');
 
     // genre
-    record['genre'] = value[3].split(', ');
+    record['genre'] = value[3].split(', ').toLowerCase();
 
     // time
     record['time'] = value[4].split(':').splice(0, 2).map(function (item, index) {

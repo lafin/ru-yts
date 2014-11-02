@@ -36,6 +36,36 @@ app.use(morgan('combined', {
 
 mongoose.connect(config.db);
 
+var genreTranslate = function (genre) {
+    var genres = {
+        'All': 'All',
+        'Action': 'боевик',
+        'Adventure': 'приключения',
+        'Animation': 'анимация|мультфильм|мультипликация',
+        'Biography': 'биография',
+        'Comedy': 'комедия',
+        'Crime': 'криминал',
+        'Documentary': 'документальный',
+        'Drama': 'драма',
+        'Family': 'семейный',
+        'Fantasy': 'фэнтези',
+        'Film-Noir': 'детектив',
+        'History': 'история|исторический',
+        'Horror': 'ужасы',
+        'Music': 'музыка|мьюзикл',
+        'Musical': 'музыка|мьюзикл',
+        'Mystery': 'мистика|мистический',
+        'Romance': 'романтика|мелодрама',
+        'Sci-Fi': 'фантастика',
+        'Short': 'короткометражка|скетч',
+        'Sport': 'спорт',
+        'Thriller': 'триллер',
+        'War': 'военный',
+        'Western': 'вестерн'
+    };
+    return genres[genre];
+};
+
 var templateRecord = function (item) {
     var info = item.info;
     return {
@@ -82,15 +112,18 @@ app.get('/api/list.json', function (req, res) {
     var params = req.query,
         limit = params.limit || 20,
         page = params.set || 1,
+        genre = params.genre || 'All',
         keywords = params.keywords || false,
-        filter = {},
+        filter = genre === 'All' ? {} : {
+            'info.genre': new RegExp(genreTranslate(genre), 'i')
+        },
         sort = {};
+
     if (keywords) {
         keywords = new RegExp(keywords, 'i');
-        filter = {
-            title: keywords
-        };
+        filter.title = keywords;
     }
+
     if (params.sort) {
         switch (params.sort) {
         case 'year':
@@ -107,6 +140,7 @@ app.get('/api/list.json', function (req, res) {
             sort[params.sort] = params.order === 'desc' ? -1 : 1;
         }
     }
+
     return itemModel.find(filter, null, {
             skip: limit * (page - 1),
             limit: limit,
