@@ -83,16 +83,34 @@ app.get('/api/list.json', function (req, res) {
         limit = params.limit || 20,
         page = params.set || 1,
         keywords = params.keywords || false,
-        filter = {};
+        filter = {},
+        sort = {};
     if (keywords) {
         keywords = new RegExp(keywords, 'i');
         filter = {
             title: keywords
         };
     }
+    if (params.sort) {
+        switch (params.sort) {
+        case 'year':
+            params.sort = 'info.year';
+            break;
+        case 'alphabet':
+            params.sort = 'title';
+            break;
+        default:
+            params.sort = false;
+            break;
+        }
+        if (params.sort) {
+            sort[params.sort] = params.order === 'desc' ? -1 : 1;
+        }
+    }
     return itemModel.find(filter, null, {
             skip: limit * (page - 1),
-            limit: limit
+            limit: limit,
+            sort: sort
         },
         function (error, items) {
             if (error) {
