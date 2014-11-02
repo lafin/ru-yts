@@ -77,9 +77,11 @@ function getMagnet(film, callback) {
         jar: true,
         encoding: null
     }, function (error, response, body) {
-        if (error) {
-            throw error;
+        if (error || response.statusCode !== 200) {
+            film['magnet'] = null;
+            return callback(null, film);
         }
+
         var metadata = bencode.decode(body),
             sha1 = crypto.createHash('sha1');
         sha1.update(bencode.encode(metadata.info));
@@ -108,7 +110,7 @@ function getData(value) {
     record['description'] = value[2].replace(/&nbsp;\(<a href=".*?"> Читать дальше... <\/a>\)/gm, '.').replace(/&quot;/gm, '"');
 
     // genre
-    record['genre'] = value[3].split(', ').toLowerCase();
+    record['genre'] = value[3].toLowerCase().split(', ');
 
     // time
     record['time'] = value[4].split(':').splice(0, 2).map(function (item, index) {
@@ -150,6 +152,12 @@ function prepareData(error, data, end) {
     async.mapSeries(films, function (film, callback) {
         return getMagnet(film, callback);
     }, function () {
+        films = films.filter(function (item) {
+            return !!item.magnet;
+        });
+        if (films.length === 0) {
+            afterSave(true);
+        }
         for (var i = 0; i < films.length; i++) {
             var film = films[i];
             var item = new itemModel({
