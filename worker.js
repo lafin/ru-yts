@@ -2,7 +2,7 @@ var request = require('request'),
     bencode = require('bencode'),
     iconv = require('iconv-lite'),
     async = require('async'),
-    // config = require('./secret'),
+// config = require('./secret'),
     config = require('./config'),
     mongoose = require('mongoose'),
     crypto = require('crypto'),
@@ -14,7 +14,8 @@ mongoose.connect(config.db);
 var db = mongoose.connection;
 
 var total = process.argv[2] || config.total,
-    offset = 15;
+    offset = 15,
+    category = process.argv[3] || 10;
 
 var logFile = fs.createWriteStream(__dirname + '/log.txt', {
         flags: 'a'
@@ -57,7 +58,7 @@ function requestLogin(callback) {
 
 function requestData(params, callback) {
     return request({
-        url: config.urlEndPoint + 'portal.php?c=10&start=' + params.page,
+        url: config.urlEndPoint + 'portal.php?c=' + category + '&start=' + params.page,
         headers: {
             'User-Agent': config.userAgent
         },
@@ -102,23 +103,31 @@ function getData(value) {
     re = re.exec(value[0]);
     record['year'] = re ? re[0].replace(/[^\d.]/g, '').substr(0, 4) : '';
 
-    record['cover'] = value[1];
+    record['cover'] = value[2];
 
     // description
-    record['description'] = value[2].replace(/&nbsp;\(<a href=".*?"> Читать дальше... <\/a>\)/gm, '.').replace(/&quot;/gm, '"');
+    record['description'] = value[3].replace(/&nbsp;\(<a href=".*?"> Читать дальше... <\/a>\)/gm, '.').replace(/&quot;/gm, '"');
 
     // genre
-    record['genre'] = value[3].split(', ');
+    record['genre'] = value[4].split(', ');
 
     // time
-    record['time'] = value[4].split(':').splice(0, 2).map(function (item, index) {
+    record['time'] = value[5].split(':').splice(0, 2).map(function (item, index) {
         return index ? +item : item * 60;
     }).reduce(function (previousValue, currentValue) {
         return previousValue + currentValue;
     });
 
     // magnet
-    record['magnet'] = value[5];
+    record['magnet'] = value[6];
+
+    // quality
+    var quality = value[0].match(/(480p|720p|1080p)/i);
+    record['quality'] = (quality ? quality[1] : '720p');
+
+    // nnm-club's rating. x2 because nnm-club has five-point scale
+    var rating = parseFloat(value[1].trim().replace(',', '.'));
+    record['rating'] = (isNaN(rating) ? 0 : (rating * 2));
 
     return record;
 }
@@ -130,12 +139,12 @@ function prepareData(error, data, end) {
     var films = [];
     data = iconv.decode(data, 'cp1251');
 
-    var re = /<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/><b>Жанр[ы]?<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>/gm;
+    var re = /<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<span.*?Рейтинг: (.*?)".*?>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/><b>Жанр[ы]?<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>/gm;
     data = data.replace(/(\n|\r|\t|\s)+/gm, ' ');
 
     var value;
     while ((value = re.exec(data)) !== null) {
-        value = getData(value.splice(1, 6));
+        value = getData(value.splice(1, 7));
         if (value) {
             films.push(value);
         }
@@ -162,7 +171,9 @@ function prepareData(error, data, end) {
                     cover: film.cover,
                     size: film.size,
                     magnet: film.magnet,
-                    year: film.year
+                    year: film.year,
+                    quality: film.quality,
+                    rating: film.rating
                 }
             });
             item.save(afterSave.call(this, (end && films.length === i + 1)));
