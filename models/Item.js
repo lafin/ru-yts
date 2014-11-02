@@ -29,6 +29,12 @@ var itemSchema = new mongoose.Schema({
         },
         year: {
             type: Number
+        },
+        quality: {
+            type: String
+        },
+        rating: {
+            type: Number
         }
     }
 });
