@@ -138,7 +138,7 @@ function getData(value) {
     record['magnet'] = value[7];
 
     // quality
-    var quality = value[0].match(/(480p|720p|1080p|1080i)/i);
+    var quality = value[0].match(/(3D|480p|720p|1080p|1080i)/i);
     record['quality'] = (quality ? quality[1].replace('i', 'p') : 'HDRip');
 
     // nnm-club's rating. x2 because nnm-club has five-point scale
