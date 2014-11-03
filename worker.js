@@ -124,8 +124,8 @@ function getData(value) {
     record['magnet'] = value[6];
 
     // quality
-    var quality = value[0].match(/(480p|720p|1080p)/i);
-    record['quality'] = (quality ? quality[1] : '720p');
+    var quality = value[0].match(/(480p|720p|1080p|1080i)/i);
+    record['quality'] = (quality ? quality[1].replace('i', 'p') : 'HDRip');
 
     // nnm-club's rating. x2 because nnm-club has five-point scale
     var rating = parseFloat(value[1].trim().replace(',', '.'));
