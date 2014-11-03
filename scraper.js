@@ -28,7 +28,6 @@ itemModel.find({}, function (error, items) {
     var checked = 0;
 
     items.forEach(function (item) {
-        console.log(item);
         var torrent = parseTorrent(item.info.magnet);
         if (torrent) {
             var client = new Client(peerId, port, torrent);
@@ -49,8 +48,6 @@ itemModel.find({}, function (error, items) {
             client.once('update', function (data) {
                 var seeders = data.complete,
                     leechers = data.incomplete;
-                console.log('seeders', seeders);
-                console.log('leechers', leechers);
                 item.info.seeders = seeders;
                 item.info.leechers = leechers;
                 item.save();
