@@ -113,7 +113,7 @@ function getData(value) {
     var record = {};
 
     // title
-    record['title'] = value[0].match(/(.*?)(\/|\()/i)[1].trim();
+    record['title'] = value[0].match(/(.*?)\(.*?\)/i)[1].trim();
 
     // get year
     var re = /\(.*?\)/i;
