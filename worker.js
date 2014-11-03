@@ -111,8 +111,12 @@ function getMagnet(film, callback) {
 function getData(value) {
     var record = {};
 
+    var title = value[0].match(/(.*?)\(.*?\)/i);
+    if (!title)
+        return false;
+
     // title
-    record['title'] = value[0].match(/(.*?)\(.*?\)/i)[1].trim();
+    record['title'] = title[1].trim();
 
     // get year
     var re = /\(.*?\)/i;
