@@ -35,6 +35,9 @@ var itemSchema = new mongoose.Schema({
         },
         rating: {
             type: Number
+        },
+        date: {
+            type: Date
         }
     }
 });
