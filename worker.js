@@ -25,6 +25,21 @@ var logFile = fs.createWriteStream(__dirname + '/log.txt', {
         theme: 'clean'
     });
 
+var months = {
+    'Янв': 'Jan',
+    'Фев': 'Fed',
+    'Мар': 'Mar',
+    'Апр': 'Apr',
+    'Май': 'May',
+    'Июн': 'Jun',
+    'Июл': 'Jul',
+    'Авг': 'Aug',
+    'Сен': 'Sep',
+    'Окт': 'Oct',
+    'Ноя': 'Nov',
+    'Дек': 'Dec'
+};
+
 function isLastPage(page) {
     return (page + offset) >= total;
 }
@@ -98,39 +113,44 @@ function getData(value) {
     var record = {};
 
     // title
-    record['title'] = value[0].match(/(.*?)\(.*?\)/i)[1].trim();
+    record['title'] = value[0].match(/(.*?)(\/|\()/i)[1].trim();
 
     // get year
     var re = /\(.*?\)/i;
     re = re.exec(value[0]);
     record['year'] = re ? re[0].replace(/[^\d.]/g, '').substr(0, 4) : '';
 
-    record['cover'] = value[2];
+    record['cover'] = value[3];
 
     // description
-    record['description'] = value[3].replace(/&nbsp;\(<a href=".*?"> Читать дальше... <\/a>\)/gm, '.').replace(/&quot;/gm, '"');
+    record['description'] = value[4].replace(/&nbsp;\(<a href=".*?"> Читать дальше... <\/a>\)/gm, '.').replace(/&quot;/gm, '"');
 
     // genre
-    record['genre'] = value[4].toLowerCase().split(', ');
+    record['genre'] = value[5].toLowerCase().split(', ');
 
     // time
-    record['time'] = value[5].split(':').splice(0, 2).map(function (item, index) {
+    record['time'] = value[6].split(':').splice(0, 2).map(function (item, index) {
         return index ? +item : item * 60;
     }).reduce(function (previousValue, currentValue) {
         return previousValue + currentValue;
     });
 
     // magnet
-    record['magnet'] = value[6];
+    record['magnet'] = value[7];
 
     // quality
     var quality = value[0].match(/(480p|720p|1080p|1080i)/i);
     record['quality'] = (quality ? quality[1].replace('i', 'p') : 'HDRip');
 
     // nnm-club's rating. x2 because nnm-club has five-point scale
-    var rating = parseFloat(value[1].trim().replace(',', '.'));
+    var rating = parseFloat(value[2].trim().replace(',', '.'));
     record['rating'] = (isNaN(rating) ? 0 : (rating * 2));
 
+    var date = value[1].trim();
+    for(var month_ru in months) {
+        date = date.replace(month_ru, months[month_ru]);
+    };
+    record['date'] = +(new Date(date));
     return record;
 }
 
@@ -141,12 +161,12 @@ function prepareData(error, data, end) {
     var films = [];
     data = iconv.decode(data, 'cp1251');
 
-    var re = /<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<span.*?Рейтинг: (.*?)".*?>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/><b>Жанр[ы]?<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>/gm;
+    var re = /<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<\/b>.*?\| (.*?)<\/span>.*?<span.*?Рейтинг: (.*?)".*?>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/><b>Жанр[ы]?<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>/gm;
     data = data.replace(/(\n|\r|\t|\s)+/gm, ' ');
 
     var value;
     while ((value = re.exec(data)) !== null) {
-        value = getData(value.splice(1, 7));
+        value = getData(value.splice(1, 8));
         if (value) {
             films.push(value);
         }
@@ -181,7 +201,8 @@ function prepareData(error, data, end) {
                     magnet: film.magnet,
                     year: film.year,
                     quality: film.quality,
-                    rating: film.rating
+                    rating: film.rating,
+                    date: film.date
                 }
             });
             item.save(afterSave.call(this, (end && films.length === i + 1)));

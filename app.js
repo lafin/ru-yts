@@ -143,6 +143,9 @@ app.get('/api/list.json', function (req, res) {
         case 'alphabet':
             params.sort = 'title';
             break;
+        case 'date':
+            params.sort = 'date';
+            break;
         default:
             params.sort = false;
             break;
