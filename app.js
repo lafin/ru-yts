@@ -1,4 +1,5 @@
 var express = require('express'),
+    // config = require('./secret'),
     config = require('./config'),
     mongoose = require('mongoose'),
     itemModel = require('./models/Item'),
@@ -43,9 +44,9 @@ var genreKeywords = function (keywords) {
             string += '(?=.*' + keyword + '.*)';
         });
         return string;
-    }(keywords.split("% "))).replace(/(е|ё)/i, '(е|ё)');
-    /* don't know why, but keywords separated by "% "*/
-}
+    }(keywords.split('% '))).replace(/(е|ё)/i, '(е|ё)');
+    /* don't know why, but keywords separated by '% '*/
+};
 
 var genreTranslate = function (genre) {
     var genres = {

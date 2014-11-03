@@ -146,8 +146,10 @@ function getData(value) {
     record['rating'] = (isNaN(rating) ? 0 : (rating * 2));
 
     var date = value[1].trim();
-    for(var month_ru in months) {
-        date = date.replace(month_ru, months[month_ru]);
+    for (var month in months) {
+        if (months.hasOwnProperty(month)) {
+            date = date.replace(month, months[month]);
+        }
     }
     record['date'] = +(new Date(date));
     return record;
@@ -206,7 +208,7 @@ function prepareData(error, data, end) {
                     leechers: 0
                 }
             });
-            item.save(afterSave.call(this, (end && films.length === i + 1)));
+            item.save(afterSave.bind(this, (end && films.length === i + 1)));
         }
     });
 }
