@@ -36,6 +36,17 @@ app.use(morgan('combined', {
 
 mongoose.connect(config.db);
 
+var genreKeywords = function (keywords) {
+    return (function (keywords) {
+        var string = '';
+        keywords.forEach(function (keyword) {
+            string += '(?=.*' + keyword + '.*)';
+        });
+        return string;
+    }(keywords.split("% "))).replace(/(е|ё)/i, '(е|ё)');
+    /* don't know why, but keywords separated by "% "*/
+}
+
 var genreTranslate = function (genre) {
     var genres = {
         'All': 'All',
@@ -120,7 +131,7 @@ app.get('/api/list.json', function (req, res) {
         sort = {};
 
     if (keywords) {
-        keywords = new RegExp(keywords, 'i');
+        keywords = new RegExp(genreKeywords(keywords), 'i');
         filter.title = keywords;
     }
 
