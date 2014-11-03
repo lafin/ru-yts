@@ -101,10 +101,9 @@ function getMagnet(film, callback) {
         var metadata = bencode.decode(body),
             sha1 = crypto.createHash('sha1');
         sha1.update(bencode.encode(metadata.info));
-
         film['hash'] = sha1.digest('hex');
         film['size'] = metadata.info.length;
-        film['magnet'] = 'magnet:?xt=urn:btih:' + film['hash'] + '&dn=' + metadata.info.name;
+        film['magnet'] = 'magnet:?xt=urn:btih:' + film['hash'] + '&dn=' + metadata.info.name + '&tr=' + metadata.announce;
         return callback(null, film);
     });
 }
@@ -149,7 +148,7 @@ function getData(value) {
     var date = value[1].trim();
     for(var month_ru in months) {
         date = date.replace(month_ru, months[month_ru]);
-    };
+    }
     record['date'] = +(new Date(date));
     return record;
 }
@@ -202,7 +201,9 @@ function prepareData(error, data, end) {
                     year: film.year,
                     quality: film.quality,
                     rating: film.rating,
-                    date: film.date
+                    date: film.date,
+                    seeders: 0,
+                    leechers: 0
                 }
             });
             item.save(afterSave.call(this, (end && films.length === i + 1)));

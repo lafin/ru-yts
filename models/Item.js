@@ -38,6 +38,12 @@ var itemSchema = new mongoose.Schema({
         },
         date: {
             type: Date
+        },
+        seeders: {
+            type: Number
+        },
+        leechers: {
+            type: Number
         }
     }
 });

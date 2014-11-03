@@ -99,9 +99,9 @@ var templateRecord = function (item) {
         'Genre': info.genre,
         'Uploader': '',
         'UploaderUID': '',
-        'TorrentSeeds': '',
+        'TorrentSeeds': info.seeders,
         'Downloaded': '',
-        'TorrentPeers': '',
+        'TorrentPeers': info.leechers,
         'TorrentUrl': info.magnet,
         'TorrentHash': item.hash,
         'TorrentMagnetUrl': info.magnet

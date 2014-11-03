@@ -6,18 +6,24 @@
     {
       "name": "Sergey Kuvakin",
       "email": "kuvakin@gmail.com"
+    },
+    {
+      "name": "Mark Langovoi",
+      "email": "marklangovoi@gmail.com"
     }
   ],
   "scripts": {},
   "dependencies": {
     "async": "^0.9.0",
     "bencode": "^0.6.0",
+    "bittorrent-tracker": "^2.7.0",
     "express": "^4.9.8",
     "iconv-lite": "^0.4.4",
     "jade": "^1.7.0",
     "logme": "^0.4.0",
     "mongoose": "^3.8.17",
     "morgan": "^1.4.1",
+    "parse-torrent": "^2.1.2",
     "request": "^2.44.0"
   }
 }
