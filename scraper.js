@@ -20,13 +20,17 @@ mongoose.connect(config.db);
 var peerId = new Buffer('01234567890123456789');
 var port = 6881;
 
-var checked = 0;
+var checked = 0,
+    error = 0,
+    warning = 0,
+    success = 0;
 
 var watcher = function (torrent, item, length) {
     var client = new Client(peerId, port, torrent);
     client.start();
 
     client.once('error', function (err) {
+        error++;
         logger.error(err);
         client.stop();
         if ((checked++) && checked === length) {
@@ -35,6 +39,7 @@ var watcher = function (torrent, item, length) {
     });
 
     client.once('warning', function (err) {
+        warning++;
         logger.error(err);
         client.stop();
         if ((checked++) && checked === length) {
@@ -43,6 +48,7 @@ var watcher = function (torrent, item, length) {
     });
 
     client.once('update', function (data) {
+        success++;
         var seeders = data.complete,
             leechers = data.incomplete;
         item.info.seeders = seeders;
@@ -68,3 +74,11 @@ itemModel.find({}, function (error, items) {
         }
     }
 });
+
+mongoose.connection.on('disconnected', function () {
+    console.log('Result:');
+    console.log('Total:', checked);
+    console.log('Success:', success);
+    console.log('Errors:', error);
+    console.log('Warnings:', warning);
+})
