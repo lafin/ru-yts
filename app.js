@@ -1,5 +1,5 @@
 var express = require('express'),
-    // config = require('./secret'),
+// config = require('./secret'),
     config = require('./config'),
     mongoose = require('mongoose'),
     itemModel = require('./models/Item'),
@@ -81,31 +81,18 @@ var genreTranslate = function (genre) {
 var templateRecord = function (item) {
     var info = item.info;
     return {
-        'MovieID': item.hash,
-        'State': 'OK',
-        'MovieUrl': '',
-        'MovieTitle': item.title,
-        'MovieTitleClean': item.title,
-        'MovieYear': info.year,
-        'AgeRating': '',
-        'DateUploaded': '',
-        'DateUploadedEpoch': Date.now(),
         'Quality': info.quality,
         'CoverImage': info.cover,
         'ImdbCode': item.hash,
-        'ImdbLink': '',
-        'Size': parseInt(info.size / 1024 / 1024, 10) + ' Mb',
-        'SizeByte': info.size + '',
-        'MovieRating': info.rating,
-        'Genre': info.genre,
-        'Uploader': '',
-        'UploaderUID': '',
-        'TorrentSeeds': info.seeders,
-        'Downloaded': '',
         'TorrentPeers': info.leechers,
+        'TorrentSeeds': info.seeders,
         'TorrentUrl': info.magnet,
-        'TorrentHash': item.hash,
-        'TorrentMagnetUrl': info.magnet
+        'SizeByte': info.size + '',
+        'Size': (info.size ? parseInt(info.size / 1024 / 1024, 10) : 'None') + ' Mb',
+        'MovieTitleClean': item.title,
+        'MovieYear': info.year,
+        'Genre': info.genre,
+        'MovieRating': info.rating
     };
 };
 
@@ -138,18 +125,18 @@ app.get('/api/list.json', function (req, res) {
 
     if (params.sort) {
         switch (params.sort) {
-        case 'year':
-            params.sort = 'info.year';
-            break;
-        case 'alphabet':
-            params.sort = 'title';
-            break;
-        case 'date':
-            params.sort = 'date';
-            break;
-        default:
-            params.sort = false;
-            break;
+            case 'year':
+                params.sort = 'info.year';
+                break;
+            case 'alphabet':
+                params.sort = 'title';
+                break;
+            case 'date':
+                params.sort = 'date';
+                break;
+            default:
+                params.sort = false;
+                break;
         }
         if (params.sort) {
             sort[params.sort] = params.order === 'desc' ? -1 : 1;
