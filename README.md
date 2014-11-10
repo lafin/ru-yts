@@ -1,6 +1,9 @@
 ### Russian films provider for Popcorn Time
 ___
 
+[![MIT](http://img.shields.io/packagist/l/doctrine/orm.svg)](LICENSE "MIT")
+[![PayPayl donate button](http://img.shields.io/paypal/donate.png?color=yellow)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=84FCYCT98BTPG "Donate once-off to this project using Paypal")
+
 ### Installation server
 need configure config.js for torrent tracker [nnm-club.me](http://nnm-club.me)
 
