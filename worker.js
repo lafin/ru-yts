@@ -112,8 +112,9 @@ function getData(value) {
     var record = {};
 
     var title = value[0].match(/(.*?)\(.*?\)/i);
-    if (!title)
+    if (!title) {
         return false;
+    }
 
     // title
     record['title'] = title[1].trim();
@@ -183,7 +184,7 @@ function prepareData(error, data, end) {
         }
     };
 
-    async.mapSeries(films, function (film, callback) {
+    async.mapLimit(films, 2, function (film, callback) {
         return getMagnet(film, callback);
     }, function () {
         films = films.filter(function (item) {
