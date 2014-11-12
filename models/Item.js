@@ -2,8 +2,7 @@ var mongoose = require('mongoose');
 
 var itemSchema = new mongoose.Schema({
     title: {
-        type: String,
-        unique: true
+        type: String
     },
     hash: {
         type: String
@@ -46,6 +45,15 @@ var itemSchema = new mongoose.Schema({
             type: Number
         }
     }
+});
+
+itemSchema.index({
+    title: 1,
+    info: {
+        quality: 1
+    }
+}, {
+    unique: true
 });
 
 module.exports = mongoose.model('Item', itemSchema);
