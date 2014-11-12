@@ -195,8 +195,10 @@ function prepareData(error, data, end) {
         }
         for (var i = 0; i < films.length; i++) {
             var film = films[i];
+            var md5 = crypto.createHash('md5');
             var item = new itemModel({
                 title: film.title,
+                guid: md5.update(film.title).digest('hex'),
                 hash: film.hash,
                 info: {
                     description: film.description,

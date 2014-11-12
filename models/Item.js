@@ -4,6 +4,9 @@ var itemSchema = new mongoose.Schema({
     title: {
         type: String
     },
+    guid: {
+        type: String
+    },
     hash: {
         type: String
     },
@@ -48,10 +51,8 @@ var itemSchema = new mongoose.Schema({
 });
 
 itemSchema.index({
-    title: 1,
-    info: {
-        quality: 1
-    }
+    'title': 1,
+    'info.quality': 1
 }, {
     unique: true
 });
