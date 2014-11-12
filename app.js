@@ -132,10 +132,10 @@ app.get('/api/list.json', function (req, res) {
                 params.sort = 'title';
                 break;
             case 'date':
-                params.sort = 'date';
+                params.sort = 'info.date';
                 break;
             default:
-                params.sort = false;
+                params.sort = 'info.date';
                 break;
         }
         if (params.sort) {
