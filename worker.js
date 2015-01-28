@@ -1,9 +1,10 @@
+process.env.MONGOOSE_DISABLE_STABILITY_WARNING = true;
+
 var request = require('request'),
     bencode = require('bencode'),
     iconv = require('iconv-lite'),
     async = require('async'),
-    // config = require('./secret'),
-    config = require('./config'),
+    config = require(process.env.DEV ? './secret' : './config'),
     mongoose = require('mongoose'),
     crypto = require('crypto'),
     itemModel = require('./models/Item'),
@@ -40,10 +41,6 @@ var months = {
     'Дек': 'Dec'
 };
 
-function isLastPage(page) {
-    return (page + offset) >= total;
-}
-
 function requestLogin(callback) {
     var form = {
         username: config.username,
@@ -69,6 +66,10 @@ function requestLogin(callback) {
         }
         return callback(null, true);
     });
+}
+
+function isLastPage(page) {
+    return (page + offset) >= total;
 }
 
 function requestData(params, callback) {
@@ -166,11 +167,9 @@ function prepareData(error, data, end) {
     }
     var films = [];
     data = iconv.decode(data, 'cp1251');
-
-    var re = /<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<\/b>.*?\| (.*?)<\/span>.*?<span.*?Рейтинг: (.*?)".*?>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/><b>Жанр[ы]?<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>/gm;
     data = data.replace(/(\n|\r|\t|\s)+/gm, ' ');
 
-    var value;
+    var value, re = new RegExp('<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<span class=\"genmed\"> <b>.*?<\/b> \\\| (.*?)<\/span> \\\| <span class=\"tit\".*?Рейтинг: (.*?)".*?>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/>.*?<b>Жанр[ы]?<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>', 'gm');
     while ((value = re.exec(data)) !== null) {
         value = getData(value.splice(1, 8));
         if (value) {
@@ -220,8 +219,8 @@ function prepareData(error, data, end) {
     });
 }
 
-db.on('error', function (e) {
-    logger.error(e.message);
+db.on('error', function (error) {
+    logger.error(error.message);
 });
 
 db.once('open', function () {
@@ -239,7 +238,7 @@ db.once('open', function () {
                 }
             }
         });
-    } catch (e) {
-        logger.error(e.message);
+    } catch (error) {
+        logger.error(error.message);
     }
 });

@@ -1,6 +1,7 @@
+process.env.MONGOOSE_DISABLE_STABILITY_WARNING = true;
+
 var express = require('express'),
-    // config = require('./secret'),
-    config = require('./config'),
+    config = require(process.env.DEV ? './secret' : './config'),
     mongoose = require('mongoose'),
     itemModel = require('./models/Item'),
     Logme = require('logme').Logme,
@@ -87,6 +88,7 @@ var templateRecord = function (item) {
         'TorrentPeers': info.leechers,
         'TorrentSeeds': info.seeders,
         'TorrentUrl': info.magnet,
+        'TorrentMagnetUrl': info.magnet,
         'SizeByte': info.size + '',
         'Size': (info.size ? parseInt(info.size / 1024 / 1024, 10) : 'None') + ' Mb',
         'MovieTitleClean': item.title,
