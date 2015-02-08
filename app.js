@@ -1,13 +1,24 @@
-process.env.MONGOOSE_DISABLE_STABILITY_WARNING = true;
-
 var express = require('express'),
-    config = require(process.env.DEV ? './secret' : './config'),
+    credential = require(process.env.DEV ? './secret' : './credential'),
+    config = require('./config'),
     mongoose = require('mongoose'),
     itemModel = require('./models/Item'),
     Logme = require('logme').Logme,
     fs = require('fs'),
     path = require('path'),
     morgan = require('morgan');
+
+var later = require('later'),
+    worker = require('./worker');
+
+later.date.localTime();
+for (var i in config.tasks) {
+    if (config.tasks.hasOwnProperty(i)) {
+        var task = config.tasks[i];
+        var scheduler = later.parse.cron(task.cron, true);
+        later.setInterval(worker.start.bind(this, task.total, task.category), scheduler);
+    }
+}
 
 var app = express();
 
@@ -19,7 +30,7 @@ var hour = 3600000,
 app.use(express['static'](path.join(__dirname, 'public'), {
     maxAge: week
 }));
-app.use(function (req, res, next) {
+app.use(function(req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
     next();
 });
@@ -36,50 +47,19 @@ app.use(morgan('combined', {
     stream: logFile
 }));
 
-mongoose.connect(config.db);
+mongoose.connect(credential.db);
 
-var genreKeywords = function (keywords) {
-    return (function (keywords) {
+var genreKeywords = function(keywords) {
+    return (function(keywords) {
         var string = '';
-        keywords.forEach(function (keyword) {
+        keywords.forEach(function(keyword) {
             string += '(?=.*' + keyword + '.*)';
         });
         return string;
     }(keywords.split('% '))).replace(/(е|ё)/i, '(е|ё)');
-    /* don't know why, but keywords separated by '% '*/
 };
 
-var genreTranslate = function (genre) {
-    var genres = {
-        'All': 'All',
-        'Action': 'боевик',
-        'Adventure': 'приключения',
-        'Animation': 'анимация|мультфильм|мультипликация',
-        'Biography': 'биография',
-        'Comedy': 'комедия',
-        'Crime': 'криминал',
-        'Documentary': 'документальный',
-        'Drama': 'драма',
-        'Family': 'семейный',
-        'Fantasy': 'фэнтези',
-        'Film-Noir': 'детектив',
-        'History': 'история|исторический',
-        'Horror': 'ужасы',
-        'Music': 'музыка|мьюзикл',
-        'Musical': 'музыка|мьюзикл',
-        'Mystery': 'мистика|мистический',
-        'Romance': 'романтика|мелодрама',
-        'Sci-Fi': 'фантастика',
-        'Short': 'короткометражка|скетч',
-        'Sport': 'спорт',
-        'Thriller': 'триллер',
-        'War': 'военный',
-        'Western': 'вестерн'
-    };
-    return genres[genre];
-};
-
-var templateRecord = function (item) {
+var templateRecord = function(item) {
     var info = item.info;
     return {
         'Quality': info.quality,
@@ -98,8 +78,8 @@ var templateRecord = function (item) {
     };
 };
 
-app.get('/', function (req, res) {
-    itemModel.count({}, function (error, count) {
+app.get('/', function(req, res) {
+    itemModel.count({}, function(error, count) {
         if (error) {
             return logger.error(error);
         }
@@ -109,14 +89,14 @@ app.get('/', function (req, res) {
     });
 });
 
-app.get('/api/list.json', function (req, res) {
+app.get('/api/list.json', function(req, res) {
     var params = req.query,
         limit = params.limit || 20,
         page = params.set || 1,
         genre = params.genre || 'All',
         keywords = params.keywords || false,
         filter = genre === 'All' ? {} : {
-            'info.genre': new RegExp(genreTranslate(genre), 'i')
+            'info.genre': new RegExp(config.genres[genre], 'i')
         },
         sort = {};
 
@@ -127,18 +107,18 @@ app.get('/api/list.json', function (req, res) {
 
     if (params.sort) {
         switch (params.sort) {
-        case 'year':
-            params.sort = 'info.year';
-            break;
-        case 'alphabet':
-            params.sort = 'title';
-            break;
-        case 'date':
-            params.sort = 'info.date';
-            break;
-        default:
-            params.sort = 'info.date';
-            break;
+            case 'year':
+                params.sort = 'info.year';
+                break;
+            case 'alphabet':
+                params.sort = 'title';
+                break;
+            case 'date':
+                params.sort = 'info.date';
+                break;
+            default:
+                params.sort = 'info.date';
+                break;
         }
         if (params.sort) {
             sort[params.sort] = params.order === 'desc' ? -1 : 1;
@@ -150,7 +130,7 @@ app.get('/api/list.json', function (req, res) {
             limit: limit,
             sort: sort
         },
-        function (error, items) {
+        function(error, items) {
             if (error) {
                 return logger.error(error);
             }
@@ -169,11 +149,11 @@ app.get('/api/list.json', function (req, res) {
         });
 });
 
-app.get('/api/listimdb.json', function (req, res) {
+app.get('/api/listimdb.json', function(req, res) {
     var params = req.query;
     return itemModel.find({
         'guid': params.imdb_id
-    }, function (error, items) {
+    }, function(error, items) {
         if (error) {
             return logger.error(error);
         }
@@ -192,6 +172,6 @@ app.get('/api/listimdb.json', function (req, res) {
     });
 });
 
-var server = app.listen(3000, function () {
+var server = app.listen(3000, function() {
     console.log('Listening on port %d', server.address().port);
 });

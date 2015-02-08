@@ -2,28 +2,22 @@
   "name": "ru-yts",
   "version": "0.0.1",
   "private": true,
-  "contributors": [
-    {
-      "name": "Sergey Kuvakin",
-      "email": "kuvakin@gmail.com"
-    },
-    {
-      "name": "Mark Langovoi",
-      "email": "marklangovoi@gmail.com"
-    }
-  ],
+  "author": "lafin <kuvakin@gmail.com>",
+  "contributors": [],
   "scripts": {},
+  "license": "MIT",
   "dependencies": {
     "async": "^0.9.0",
     "bencode": "^0.6.0",
-    "bittorrent-tracker": "^2.7.0",
-    "express": "^4.9.8",
-    "iconv-lite": "^0.4.4",
-    "jade": "^1.7.0",
+    "bittorrent-tracker": "^2.12.1",
+    "express": "^4.11.2",
+    "iconv-lite": "^0.4.7",
+    "jade": "^1.9.2",
+    "later": "^1.1.6",
     "logme": "^0.4.0",
-    "mongoose": "^3.8.17",
-    "morgan": "^1.4.1",
-    "parse-torrent": "^2.1.2",
-    "request": "^2.44.0"
+    "mongoose": "^3.9.7",
+    "morgan": "^1.5.1",
+    "parse-torrent": "^2.3.0",
+    "request": "^2.53.0"
   }
 }

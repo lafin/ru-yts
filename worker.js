@@ -1,22 +1,17 @@
-process.env.MONGOOSE_DISABLE_STABILITY_WARNING = true;
-
 var request = require('request'),
     bencode = require('bencode'),
     iconv = require('iconv-lite'),
     async = require('async'),
-    config = require(process.env.DEV ? './secret' : './config'),
+    credential = require(process.env.DEV ? './secret' : './credential'),
+    config = require('./config'),
     mongoose = require('mongoose'),
     crypto = require('crypto'),
-    itemModel = require('./models/Item'),
+    Item = require('./models/Item'),
     Logme = require('logme').Logme,
     fs = require('fs');
 
-mongoose.connect(config.db);
-var db = mongoose.connection;
-
-var total = process.argv[2] || config.total,
-    offset = 15,
-    category = process.argv[3] || 10;
+var offset = 15,
+    needSaveItem = 0;
 
 var logFile = fs.createWriteStream(__dirname + '/log.txt', {
         flags: 'a'
@@ -26,31 +21,21 @@ var logFile = fs.createWriteStream(__dirname + '/log.txt', {
         theme: 'clean'
     });
 
-var months = {
-    'Янв': 'Jan',
-    'Фев': 'Fed',
-    'Мар': 'Mar',
-    'Апр': 'Apr',
-    'Май': 'May',
-    'Июн': 'Jun',
-    'Июл': 'Jul',
-    'Авг': 'Aug',
-    'Сен': 'Sep',
-    'Окт': 'Oct',
-    'Ноя': 'Nov',
-    'Дек': 'Dec'
-};
+var db = mongoose.connection;
+db.on('error', function(error) {
+    logger.error(error.message);
+});
 
 function requestLogin(callback) {
     var form = {
-        username: config.username,
-        password: config.password,
+        username: credential.username,
+        password: credential.password,
         autologin: 'on',
         redirect: '',
-        login: config.username
+        login: credential.username
     };
     return request({
-        url: config.urlEndPoint + 'login.php',
+        url: credential.urlEndPoint + 'login.php',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
             'User-Agent': config.userAgent
@@ -60,7 +45,7 @@ function requestLogin(callback) {
         jar: true,
         followAllRedirects: true,
         encoding: null
-    }, function (error) {
+    }, function(error) {
         if (error) {
             return callback(error);
         }
@@ -68,37 +53,36 @@ function requestLogin(callback) {
     });
 }
 
-function isLastPage(page) {
-    return (page + offset) >= total;
-}
-
 function requestData(params, callback) {
     return request({
-        url: config.urlEndPoint + 'portal.php?c=' + category + '&start=' + params.page,
+        url: credential.urlEndPoint + 'portal.php?c=' + params.category + '&start=' + params.page,
         headers: {
             'User-Agent': config.userAgent
         },
         jar: true,
         encoding: null
-    }, function (error, response, body) {
+    }, function(error, response, body) {
         if (error) {
             return callback(error);
         }
-        return callback(null, body, isLastPage(params.page));
+        return callback(null, body);
     });
 }
 
 function getMagnet(film, callback) {
     return request({
-        url: config.urlEndPoint + film['magnet'],
+        url: credential.urlEndPoint + film['magnet'],
+        headers: {
+            'User-Agent': config.userAgent
+        },
+        timeout: 10000,
         jar: true,
         encoding: null
-    }, function (error, response, body) {
+    }, function(error, response, body) {
         if (error || response.statusCode !== 200) {
             film['magnet'] = null;
             return callback(null, film);
         }
-
         var metadata = bencode.decode(body),
             sha1 = crypto.createHash('sha1');
         sha1.update(bencode.encode(metadata.info));
@@ -134,9 +118,9 @@ function getData(value) {
     record['genre'] = value[5].toLowerCase().split(', ');
 
     // time
-    record['time'] = value[6].split(':').splice(0, 2).map(function (item, index) {
+    record['time'] = value[6].split(':').splice(0, 2).map(function(item, index) {
         return index ? +item : item * 60;
-    }).reduce(function (previousValue, currentValue) {
+    }).reduce(function(previousValue, currentValue) {
         return previousValue + currentValue;
     });
 
@@ -152,16 +136,22 @@ function getData(value) {
     record['rating'] = (isNaN(rating) ? 0 : (rating * 2));
 
     var date = value[1].trim();
-    for (var month in months) {
-        if (months.hasOwnProperty(month)) {
-            date = date.replace(month, months[month]);
+    for (var month in config.months) {
+        if (config.months.hasOwnProperty(month)) {
+            date = date.replace(month, config.months[month]);
         }
     }
     record['date'] = +(new Date(date));
     return record;
 }
 
-function prepareData(error, data, end) {
+function afterSave(lastItem) {
+    if (lastItem) {
+        logger.info('stop');
+    }
+}
+
+function prepareData(error, data) {
     if (error) {
         throw error;
     }
@@ -177,25 +167,20 @@ function prepareData(error, data, end) {
         }
     }
 
-    var afterSave = function (disconnect) {
-        if (disconnect) {
-            mongoose.disconnect();
-        }
-    };
-
-    async.mapLimit(films, 2, function (film, callback) {
+    async.mapLimit(films, 2, function(film, callback) {
         return getMagnet(film, callback);
-    }, function () {
-        films = films.filter(function (item) {
+    }, function() {
+        films = films.filter(function(item) {
             return !!item.magnet;
         });
         if (films.length === 0) {
-            afterSave(true);
+            return afterSave(true);
         }
+        needSaveItem = films.length;
         for (var i = 0; i < films.length; i++) {
             var film = films[i];
             var md5 = crypto.createHash('md5');
-            var item = new itemModel({
+            var item = new Item({
                 title: film.title,
                 guid: md5.update(film.title).digest('hex'),
                 hash: film.hash,
@@ -214,31 +199,33 @@ function prepareData(error, data, end) {
                     leechers: 0
                 }
             });
-            item.save(afterSave.bind(this, (end && films.length === i + 1)));
+            item.save(afterSave.bind(this, --needSaveItem === 0));
         }
     });
 }
 
-db.on('error', function (error) {
-    logger.error(error.message);
-});
-
-db.once('open', function () {
-    try {
-        requestLogin(function (error, status) {
-            if (error) {
-                throw error;
-            }
-            if (status) {
-                for (var page = 0; page < total; page += offset) {
-                    var params = {
-                        page: page
-                    };
-                    requestData(params, prepareData);
+exports = module.exports = {
+    start: function(total, category) {
+        total = total || 10;
+        category = category || 10;
+        logger.info('start');
+        try {
+            return requestLogin(function(error, status) {
+                if (error) {
+                    throw error;
                 }
-            }
-        });
-    } catch (error) {
-        logger.error(error.message);
+                if (status) {
+                    for (var page = 0; page < total; page += offset) {
+                        var params = {
+                            page: page,
+                            category: category
+                        };
+                        return requestData(params, prepareData);
+                    }
+                }
+            });
+        } catch (error) {
+            logger.error(error.message);
+        }
     }
-});
+};
