@@ -4,7 +4,7 @@ ___
 ### Attention! I finished supporting server. You can deploy your server. This was very fun ^^
 
 ### Deploy
-example config [here](config.md)
+example config with nginx, docker and upstart [here](SETUP.md)
 
 ### Installation server
 need configure config.js for torrent tracker [nnm-club.me](http://nnm-club.me)
