@@ -16,7 +16,7 @@ $ node worker.js // need run by cron
 ```
 
 ### Build client (Popcorn Time player 3.7)
-need [download client](https://git.popcorntime.io/stash/projects/PT/repos/popcorn-app/browse) and apply patch and build client [howto](https://git.popcorntime.io/stash/projects/PT/repos/popcorn-app/browse)
+need [download client](https://git.popcorntime.io/popcorntime/desktop/tree/master) and apply patch and build client [howto](https://git.popcorntime.io/popcorntime/desktop/tree/master)
 ```diff
 diff --git a/src/app/settings.js b/src/app/settings.js
 index 5e2b980..38a5e4d 100644

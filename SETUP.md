@@ -58,9 +58,9 @@ start on runlevel [2345]
 stop on runlevel [!2345]
 
 pre-start script
-
-end script
   /usr/bin/docker start -a mongodb
+end script
+
 respawn
 
 script
