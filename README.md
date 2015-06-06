@@ -1,6 +1,8 @@
 ### Russian films provider for Popcorn Time
 ___
 
+### I am not affiliated with the project [popcorn-time.ru](http://popcorn-time.ru/)
+
 ### Deploy
 example config with nginx, docker and upstart [here](SETUP.md)
 
