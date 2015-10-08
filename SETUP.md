@@ -1,7 +1,7 @@
 #### nginx config
 
 ```
-$ root@server:~# cat /etc/nginx/sites-enabled/yts.lafin.me 
+$ root@server:~# cat /etc/nginx/sites-enabled/yts.lafin.me
 
 upstream app {
   ip_hash;
@@ -42,8 +42,8 @@ server {
 #### docker
 
 ```
-docker pull dockerfile/mongodb
-docker run -d -p 27017:27017 --name mongodb dockerfile/mongodb
+docker pull mongo
+docker run -d -p 27017:27017 --name mongodb mongo
 
 docker build -t yts .
 docker run -d -p 3000:3000 --link mongodb:mongodb --name yts -t yts
