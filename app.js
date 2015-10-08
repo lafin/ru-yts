@@ -30,7 +30,7 @@ var hour = 3600000,
 app.use(express['static'](path.join(__dirname, 'public'), {
     maxAge: week
 }));
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
     next();
 });
@@ -49,37 +49,18 @@ app.use(morgan('combined', {
 
 mongoose.connect(credential.db);
 
-var genreKeywords = function(keywords) {
-    return (function(keywords) {
+var genreKeywords = function (keywords) {
+    return (function (keywords) {
         var string = '';
-        keywords.forEach(function(keyword) {
+        keywords.forEach(function (keyword) {
             string += '(?=.*' + keyword + '.*)';
         });
         return string;
     }(keywords.split('% '))).replace(/(е|ё)/i, '(е|ё)');
 };
 
-var templateRecord = function(item) {
-    var info = item.info;
-    return {
-        'Quality': info.quality,
-        'CoverImage': info.cover,
-        'ImdbCode': item.guid,
-        'TorrentPeers': info.leechers,
-        'TorrentSeeds': info.seeders,
-        'TorrentUrl': info.magnet,
-        'TorrentMagnetUrl': info.magnet,
-        'SizeByte': info.size + '',
-        'Size': (info.size ? parseInt(info.size / 1024 / 1024, 10) : 'None') + ' Mb',
-        'MovieTitleClean': item.title,
-        'MovieYear': info.year,
-        'Genre': info.genre,
-        'MovieRating': info.rating
-    };
-};
-
-app.get('/', function(req, res) {
-    itemModel.count({}, function(error, count) {
+app.get('/', function (req, res) {
+    itemModel.count({}, function (error, count) {
         if (error) {
             return logger.error(error);
         }
@@ -89,9 +70,34 @@ app.get('/', function(req, res) {
     });
 });
 
-app.get('/api/list.json', function(req, res) {
+var templateRecord = function (item) {
+    var info = item.info;
+    return {
+        imdb_code: item.guid,
+        title: item.title,
+        title_english: item.title,
+        year: info.year,
+        genres: info.genre.split(','),
+        rating: info.rating,
+        medium_cover_image: info.cover,
+        large_cover_image: info.cover,
+        description_full: info.description,
+        runtime: info.time,
+        torrents: [{
+            url: info.magnet,
+            hash: item.hash,
+            quality: info.quality,
+            seeds: info.seeders,
+            peers: info.leechers,
+            size: (info.size ? parseInt(info.size / 1024 / 1024, 10) : 'None') + ' Mb',
+            size_bytes: info.size
+        }]
+    };
+};
+
+app.get('/api/v2/list_movies_pct.json', function (req, res) {
     var params = req.query,
-        limit = params.limit || 20,
+        limit = ~~params.limit || 20,
         page = params.set || 1,
         genre = params.genre || 'All',
         keywords = params.keywords || false,
@@ -107,18 +113,18 @@ app.get('/api/list.json', function(req, res) {
 
     if (params.sort) {
         switch (params.sort) {
-            case 'year':
-                params.sort = 'info.year';
-                break;
-            case 'alphabet':
-                params.sort = 'title';
-                break;
-            case 'date':
-                params.sort = 'info.date';
-                break;
-            default:
-                params.sort = 'info.date';
-                break;
+        case 'year':
+            params.sort = 'info.year';
+            break;
+        case 'alphabet':
+            params.sort = 'title';
+            break;
+        case 'date':
+            params.sort = 'info.date';
+            break;
+        default:
+            params.sort = 'info.date';
+            break;
         }
         if (params.sort) {
             sort[params.sort] = params.order === 'desc' ? -1 : 1;
@@ -130,7 +136,7 @@ app.get('/api/list.json', function(req, res) {
             limit: limit,
             sort: sort
         },
-        function(error, items) {
+        function (error, items) {
             if (error) {
                 return logger.error(error);
             }
@@ -143,35 +149,24 @@ app.get('/api/list.json', function(req, res) {
             }
 
             return res.json({
-                'MovieCount': items.length,
-                'MovieList': list
+                status: 'ok',
+                status_message: 'Query was successful',
+                data: {
+                    movie_count: items.length,
+                    limit: limit,
+                    page_number: page,
+                    movies: list
+                },
+                '@meta': {
+                    server_time: (Date.now() / 1000 | 0),
+                    server_timezone: 'Europe/Moscow',
+                    api_version: 2,
+                    execution_time: '37.61 ms'
+                }
             });
         });
 });
 
-app.get('/api/listimdb.json', function(req, res) {
-    var params = req.query;
-    return itemModel.find({
-        'guid': params.imdb_id
-    }, function(error, items) {
-        if (error) {
-            return logger.error(error);
-        }
-
-        var list = [],
-            i = null;
-        for (i = 0; i < items.length; i++) {
-            var item = items[i];
-            list.push(templateRecord(item));
-        }
-
-        return res.json({
-            'MovieCount': items.length,
-            'MovieList': list
-        });
-    });
-});
-
-var server = app.listen(3000, function() {
+var server = app.listen(3000, function () {
     console.log('Listening on port %d', server.address().port);
 });

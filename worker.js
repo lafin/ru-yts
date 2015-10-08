@@ -204,7 +204,7 @@ function prepareData(error, data) {
     });
 }
 
-exports = module.exports = {
+module.exports = {
     start: function(total, category) {
         total = total || 10;
         category = category || 10;
