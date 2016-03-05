@@ -9,17 +9,16 @@
   },
   "license": "MIT",
   "dependencies": {
-    "async": "^1.4.2",
+    "async": "^1.5.2",
     "bencode": "^0.7.0",
-    "bittorrent-tracker": "^6.0.5",
-    "express": "^4.13.3",
+    "express": "^4.13.4",
     "iconv-lite": "^0.4.13",
     "jade": "^1.11.0",
-    "later": "^1.1.10",
+    "later": "^1.2.0",
     "logme": "^0.4.0",
-    "mongoose": "^4.1.10",
-    "morgan": "^1.6.1",
-    "parse-torrent": "^5.4.0",
-    "request": "^2.64.0"
+    "mongoose": "^4.4.6",
+    "morgan": "^1.7.0",
+    "parse-torrent": "^5.7.3",
+    "request": "^2.69.0"
   }
 }

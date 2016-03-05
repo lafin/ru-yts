@@ -75,68 +75,89 @@ var templateRecord = function (item) {
     return {
         imdb_code: item.guid,
         title: item.title,
-        title_english: item.title,
+        title_long: item.title,
         year: info.year,
         genres: info.genre.split(','),
         rating: info.rating,
         medium_cover_image: info.cover,
-        large_cover_image: info.cover,
-        description_full: info.description,
+        small_cover_image: info.cover,
+        synopsis: info.description,
         runtime: info.time,
+        state: 'ok',
         torrents: [{
             url: info.magnet,
             hash: item.hash,
             quality: info.quality,
-            seeds: info.seeders,
-            peers: info.leechers,
-            size: (info.size ? parseInt(info.size / 1024 / 1024, 10) : 'None') + ' Mb',
+            seeds: 0,
+            peers: 0,
+            size: info.size ? parseInt(info.size / 1024 / 1024, 10) + ' Mb' : null,
             size_bytes: info.size
         }]
     };
 };
 
-app.get('/api/v2/list_movies_pct.json', function (req, res) {
+app.get('/api/v2/list_movies.json', function (req, res) {
     var params = req.query,
         limit = ~~params.limit || 20,
-        page = params.set || 1,
+        page = params.page || 1,
         genre = params.genre || 'All',
-        keywords = params.keywords || false,
+        query_term = params.query_term || false,
         filter = genre === 'All' ? {} : {
             'info.genre': new RegExp(config.genres[genre], 'i')
         },
-        sort = {};
+        sort_by = {};
 
-    if (keywords) {
-        keywords = new RegExp(genreKeywords(keywords), 'i');
-        filter.title = keywords;
+    if (query_term) {
+        query_term = new RegExp(genreKeywords(query_term), 'i');
+        filter.title = query_term;
     }
 
-    if (params.sort) {
-        switch (params.sort) {
+    if (params.sort_by) {
+        switch (params.sort_by) {
         case 'year':
-            params.sort = 'info.year';
+            params.sort_by = 'info.year';
             break;
-        case 'alphabet':
-            params.sort = 'title';
+        case 'title':
+            params.sort_by = 'title';
             break;
-        case 'date':
-            params.sort = 'info.date';
+        case 'date_added':
+            params.sort_by = 'info.date';
             break;
         default:
-            params.sort = 'info.date';
+            params.sort_by = 'info.date';
             break;
         }
-        if (params.sort) {
-            sort[params.sort] = params.order === 'desc' ? -1 : 1;
+        if (params.sort_by) {
+            sort_by[params.sort_by] = params.order_by === 'desc' ? -1 : 1;
         }
     }
 
-    return itemModel.find(filter, null, {
-            skip: limit * (page - 1),
-            limit: limit,
-            sort: sort
-        },
-        function (error, items) {
+    return itemModel.count({}, function (error, count) {
+        if (error) {
+            return logger.error(error);
+        }
+
+        itemModel
+        .aggregate()
+        // .group({
+        //     _id: '$guid',
+        //     year: {
+        //         $max: '$info.year'
+        //     },
+        //     torrents: {
+        //         $addToSet: {
+        //             hash: "$hash",
+        //             magnet: "$info.magnet",
+        //             quality: "$info.quality",
+        //             size: "$info.size"
+        //         }
+        //     }
+        // })
+        .match(filter)
+        .skip(limit * (page - 1))
+        .limit(limit)
+        .sort(sort_by)
+        .exec(function (error, items) {
             if (error) {
                 return logger.error(error);
             }
@@ -152,19 +173,14 @@ app.get('/api/v2/list_movies_pct.json', function (req, res) {
                 status: 'ok',
                 status_message: 'Query was successful',
                 data: {
-                    movie_count: items.length,
+                    movie_count: count,
                     limit: limit,
                     page_number: page,
                     movies: list
-                },
-                '@meta': {
-                    server_time: (Date.now() / 1000 | 0),
-                    server_timezone: 'Europe/Moscow',
-                    api_version: 2,
-                    execution_time: '37.61 ms'
                 }
             });
         });
+    });
 });
 
 var server = app.listen(3000, function () {

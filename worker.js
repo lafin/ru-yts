@@ -10,7 +10,7 @@ var request = require('request'),
     Logme = require('logme').Logme,
     fs = require('fs');
 
-var offset = 15,
+var offset = 16,
     needSaveItem = 0;
 
 var logFile = fs.createWriteStream(__dirname + '/log.txt', {
@@ -54,8 +54,9 @@ function requestLogin(callback) {
 }
 
 function requestData(params, callback) {
+    var url = credential.urlEndPoint + 'portal.php?c=' + params.category + '&start=' + params.page;
     return request({
-        url: credential.urlEndPoint + 'portal.php?c=' + params.category + '&start=' + params.page,
+        url: url,
         headers: {
             'User-Agent': config.userAgent
         },
@@ -145,36 +146,23 @@ function getData(value) {
     return record;
 }
 
-function afterSave(lastItem) {
+function afterSave(lastItem, callback) {
+    callback = callback || function () {};
     if (lastItem) {
         logger.info('stop');
+        return callback();
     }
 }
 
-function prepareData(error, data) {
-    if (error) {
-        throw error;
-    }
-    var films = [];
-    data = iconv.decode(data, 'cp1251');
-    data = data.replace(/(\n|\r|\t|\s)+/gm, ' ');
-
-    var value, re = new RegExp('<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<span class=\"genmed\"> <b>.*?<\/b> \\\| (.*?)<\/span> \\\| <span class=\"tit\".*?Рейтинг: (.*?)".*?>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/>.*?<b>Жанр[ы]?<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>', 'gm');
-    while ((value = re.exec(data)) !== null) {
-        value = getData(value.splice(1, 8));
-        if (value) {
-            films.push(value);
-        }
-    }
-
+function doSave(films, callback) {
     async.mapLimit(films, 2, function(film, callback) {
         return getMagnet(film, callback);
     }, function() {
         films = films.filter(function(item) {
-            return !!item.magnet;
+            return !!item.magnet && item.quality !== '3D';
         });
         if (films.length === 0) {
-            return afterSave(true);
+            return afterSave(true, callback);
         }
         needSaveItem = films.length;
         for (var i = 0; i < films.length; i++) {
@@ -199,9 +187,29 @@ function prepareData(error, data) {
                     leechers: 0
                 }
             });
-            item.save(afterSave.bind(this, --needSaveItem === 0));
+            item.save(function(error) {
+                if (error) {
+                    logger.error(error.message);
+                    return afterSave(true, callback);
+                }
+                return afterSave(--needSaveItem === 0, callback);
+            });
         }
     });
+}
+
+function prepareAndSaveData(data, callback) {
+    var films = [];
+    data = iconv.decode(data, 'cp1251');
+    data = data.replace(/(\n|\r|\t|\s)+/gm, ' ');
+    var value, re = new RegExp('<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<span class=\"genmed\"> <b>.*?<\/b> \\\| (.*?)<\/span> \\\| <span class=\"tit\".*?Рейтинг: (.*?)".*?>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/>.*?<b>Жанр[ы]?<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>', 'gm');
+    while ((value = re.exec(data)) !== null) {
+        value = getData(value.splice(1, 8));
+        if (value) {
+            films.push(value);
+        }
+    }
+    return doSave(films, callback);
 }
 
 module.exports = {
@@ -220,7 +228,12 @@ module.exports = {
                             page: page,
                             category: category
                         };
-                        return requestData(params, prepareData);
+                        requestData(params, function(error, data) {
+                            if (error) {
+                                throw error;
+                            }
+                            prepareAndSaveData(data);
+                        });
                     }
                 }
             });
@@ -229,3 +242,7 @@ module.exports = {
         }
     }
 };
+
+if (require.main === module) {
+    module.exports.start(25, 10);
+}
