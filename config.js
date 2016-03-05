@@ -42,11 +42,11 @@ module.exports = {
 	},
 	tasks: [{
 		cron: '0 0 * * * *',
-		total: 10,
+		total: 50,
 		category: 10
 	}, {
 		cron: '0 30 * * * *',
-		total: 10,
+		total: 50,
 		category: 11
 	}]
 };
