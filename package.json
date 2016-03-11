@@ -3,9 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "author": "lafin <kuvakin@gmail.com>",
-  "contributors": [],
   "scripts": {
-    "start": "node app.js"
+    "start": "node server/app.js"
   },
   "license": "MIT",
   "dependencies": {

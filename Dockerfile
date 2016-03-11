@@ -25,7 +25,7 @@ module.exports = {\n\
     urlEndPoint: 'http://nnm-club.me/forum/',\n\
     username: 'YOU LOGIN',\n\
     password: 'YOU PASSWORD'\n\
-};\n" > /var/apps/yts/credential.js
+};\n" > /var/apps/yts/server/credential.js
 
 EXPOSE 3000
 

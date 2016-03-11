@@ -1,29 +1,39 @@
-var request = require('request'),
-    bencode = require('bencode'),
-    iconv = require('iconv-lite'),
-    async = require('async'),
-    credential = require(process.env.DEV ? './secret' : './credential'),
-    config = require('./config'),
-    mongoose = require('mongoose'),
-    crypto = require('crypto'),
-    Item = require('./models/Item'),
-    Logme = require('logme').Logme,
-    fs = require('fs');
+var request = require('request');
+var bencode = require('bencode');
+var iconv = require('iconv-lite');
+var async = require('async');
+var mongoose = require('mongoose');
+var crypto = require('crypto');
+var Logme = require('logme').Logme;
+var fs = require('fs');
+var later = require('later');
 
-var offset = 16,
-    needSaveItem = 0;
+var Item = require('./models/Item');
+var config = require('./config');
+var credential = require(process.env.DEV ? './secret' : './credential');
 
-var logFile = fs.createWriteStream(__dirname + '/log.txt', {
-        flags: 'a'
-    }),
-    logger = new Logme({
-        stream: logFile,
-        theme: 'clean'
-    });
+var offset = 16;
+var needSaveItem = 0;
+
+var logInfoFile = fs.createWriteStream(__dirname + '/../info.log', {
+    flags: 'a'
+});
+var loggerInfo = new Logme({
+    stream: logInfoFile,
+    theme: 'clean'
+});
+
+var logErrorFile = fs.createWriteStream(__dirname + '/../error.log', {
+    flags: 'a'
+});
+var loggerError = new Logme({
+    stream: logErrorFile,
+    theme: 'clean'
+});
 
 var db = mongoose.connection;
 db.on('error', function(error) {
-    logger.error(error.message);
+    loggerError.error(error.message);
 });
 
 function requestLogin(callback) {
@@ -147,9 +157,9 @@ function getData(value) {
 }
 
 function afterSave(lastItem, callback) {
-    callback = callback || function () {};
+    callback = callback || function() {};
     if (lastItem) {
-        logger.info('stop');
+        loggerInfo.info('stop');
         return callback();
     }
 }
@@ -189,8 +199,7 @@ function doSave(films, callback) {
             });
             item.save(function(error) {
                 if (error) {
-                    logger.error(error.message);
-                    return afterSave(true, callback);
+                    loggerError.error(error.message);
                 }
                 return afterSave(--needSaveItem === 0, callback);
             });
@@ -212,11 +221,11 @@ function prepareAndSaveData(data, callback) {
     return doSave(films, callback);
 }
 
-module.exports = {
+var worker = module.exports = {
     start: function(total, category) {
         total = total || 10;
         category = category || 10;
-        logger.info('start');
+        loggerInfo.info('start');
         try {
             return requestLogin(function(error, status) {
                 if (error) {
@@ -238,11 +247,20 @@ module.exports = {
                 }
             });
         } catch (error) {
-            logger.error(error.message);
+            loggerError.error(error.message);
         }
     }
 };
 
 if (require.main === module) {
-    module.exports.start(25, 10);
+    worker.start(25, 10);
+} else {
+    later.date.localTime();
+    for (var i in config.tasks) {
+        if (config.tasks.hasOwnProperty(i)) {
+            var task = config.tasks[i];
+            var scheduler = later.parse.cron(task.cron, true);
+            later.setInterval(worker.start.bind(this, task.total, task.category), scheduler);
+        }
+    }
 }

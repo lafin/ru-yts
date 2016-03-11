@@ -5,7 +5,7 @@ ___
 ### I am not affiliated with the project [popcorn-time.ru](http://popcorn-time.ru/)
 
 ### Deploy
-example config with nginx, docker and upstart [here](SETUP.md)
+example config with nginx, docker and upstart [here](docs/SETUP.md)
 
 ### Installation server
 need configure config.js for torrent tracker [nnm-club.me](http://nnm-club.me)
@@ -24,4 +24,4 @@ Download last version Popcorn Time [here](http://popcorntime.ag) Into the settin
 
 ### License
 
-  [MIT](LICENSE)
+  MIT
