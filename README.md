@@ -8,7 +8,7 @@ ___
 example config with nginx, docker and upstart [here](docs/SETUP.md)
 
 ### Installation server
-need configure [server/credential.js](server/credential.js) for torrent tracker [nnm-club.me](http://nnm-club.me)
+need configure [server/credential.js](server/credential.js) for torrent tracker [nnm-club.me](http://nnmclub.to/)
 
 ```bash
 $ npm i

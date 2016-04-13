@@ -4,7 +4,7 @@ var connectionString = 'mongodb://' + ip + ':' + mongoPort + '/db';
 
 module.exports = {
     db: connectionString,
-    urlEndPoint: 'http://nnm-club.me/forum/',
+    urlEndPoint: 'http://nnmclub.to/forum/',
     username: '',
     password: ''
 };

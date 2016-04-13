@@ -22,7 +22,7 @@ var ip = process.env.MONGODB_PORT_27017_TCP_ADDR;\n\
 var connectionString = 'mongodb://' + ip + ':' + mongoPort + '/db';\n\
 module.exports = {\n\
     db: connectionString || 'mongodb://localhost:27017/db',\n\
-    urlEndPoint: 'http://nnm-club.me/forum/',\n\
+    urlEndPoint: 'http://nnmclub.to/forum/',\n\
     username: 'YOU LOGIN',\n\
     password: 'YOU PASSWORD'\n\
 };\n" > /var/apps/yts/server/credential.js
