@@ -1,11 +1,6 @@
 FROM ubuntu:14.04
 MAINTAINER lafin <kuvakin@gmail.com>
 
-RUN echo \
-"deb http://mirror.yandex.ru/ubuntu/ trusty main restricted universe multiverse\n\
-deb http://mirror.yandex.ru/ubuntu/ trusty-security main restricted universe multiverse\n\
-deb http://mirror.yandex.ru/ubuntu/ trusty-updates main restricted universe multiverse\n" > /etc/apt/sources.list
-
 RUN apt-get update -y
 RUN apt-get install -y git nodejs npm vim
 RUN useradd -MUs /bin/bash node
@@ -31,4 +26,4 @@ EXPOSE 3000
 
 RUN chown node:node /var/apps/yts/ -R
 USER node
-CMD nodejs /var/apps/yts/app.js
+CMD nodejs /var/apps/yts/server/app.js
