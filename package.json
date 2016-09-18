@@ -8,16 +8,16 @@
   },
   "license": "MIT",
   "dependencies": {
-    "async": "^2.0.0-rc.2",
-    "bencode": "^0.8.0",
-    "express": "^4.13.4",
+    "async": "^2.0.1",
+    "bencode": "^0.10.0",
+    "express": "^4.14.0",
     "iconv-lite": "^0.4.13",
-    "jade": "^1.11.0",
     "later": "^1.2.0",
     "logme": "^0.4.0",
-    "mongoose": "^4.4.10",
+    "mongoose": "^4.6.0",
     "morgan": "^1.7.0",
-    "parse-torrent": "^5.7.3",
-    "request": "^2.69.0"
+    "parse-torrent": "^5.8.1",
+    "pug": "^2.0.0-beta6",
+    "request": "^2.75.0"
   }
 }

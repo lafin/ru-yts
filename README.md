@@ -4,15 +4,8 @@ ___
 ![](screenshot.png)
 ### I am not affiliated with the project [popcorn-time.ru](http://popcorn-time.ru/)
 
-### Deploy
-example config with nginx, docker and upstart [here](docs/SETUP.md)
-
-### Installation server
-need configure [server/credential.js](server/credential.js) for torrent tracker [nnm-club.me](http://nnmclub.to/)
-
-```bash
-$ npm i
-$ npm start
+```
+$ USERNAME=username PASSWORD=password docker-compose up
 ```
 
 ### Setup

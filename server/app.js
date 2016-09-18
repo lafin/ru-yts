@@ -12,7 +12,7 @@ require('./worker');
 
 var app = express();
 app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+app.set('view engine', 'pug');
 app.use(express['static'](path.join(__dirname, '../client')));
 app.use(function(req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');

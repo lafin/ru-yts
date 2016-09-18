@@ -1,10 +1,11 @@
-var mongoPort = process.env.MONGODB_PORT_27017_TCP_PORT || 27017;
-var ip = process.env.MONGODB_PORT_27017_TCP_ADDR || 'localhost';
-var connectionString = 'mongodb://' + ip + ':' + mongoPort + '/db';
+var mongoAddr = process.env.MONGO_PORT_27017_TCP_ADDR || 'localhost';
+var mongoPort = process.env.MONGO_PORT_27017_TCP_PORT || 27017;
+var username = process.env.USERNAME || 'username';
+var password = process.env.PASSWORD || 'password';
 
 module.exports = {
-    db: connectionString,
+    db: 'mongodb://' + mongoAddr + ':' + mongoPort + '/db',
     urlEndPoint: 'http://nnmclub.to/forum/',
-    username: '',
-    password: ''
+    username: username,
+    password: password
 };
