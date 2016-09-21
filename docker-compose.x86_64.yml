@@ -1,0 +1,11 @@
+web:
+  image: lafin/ru-yts:x86_64
+  ports:
+    - "3000:3000"
+  links:
+    - "mongo"
+
+mongo:
+  image: "mongo"
+  volumes:
+    - "db:/data/db"

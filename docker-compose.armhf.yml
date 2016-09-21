@@ -1,0 +1,11 @@
+web:
+  image: lafin/ru-yts:armhf
+  ports:
+    - "3000:3000"
+  links:
+    - "mongo"
+
+mongo:
+  image: "partlab/ubuntu-arm-mongodb"
+  volumes:
+    - "db:/data/db"

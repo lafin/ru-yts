@@ -1,0 +1,20 @@
+language: bash
+services: docker
+
+env:
+  - ARCH=x86_64
+  - ARCH=armhf
+
+install:
+  - git clone https://github.com/lafin/ru-yts.git ${ARCH}/
+
+before_script:
+  - docker run --rm --privileged multiarch/qemu-user-static:register --reset
+  - sed -ie "s/FROM lafin\/alpine:platform/FROM lafin\/alpine:${ARCH}\-v3.4/" ${ARCH}/Dockerfile
+
+script:
+  - docker build -t lafin/ru-yts:${ARCH} ${ARCH}
+
+after_success:
+  - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+  - docker push lafin/ru-yts

@@ -1,11 +1,12 @@
 ### Russian films provider for Popcorn Time
+[![Build Status](https://travis-ci.org/lafin/ru-yts.svg?branch=master)](https://travis-ci.org/lafin/ru-yts)
 ___
 
 ![](screenshot.png)
-### I am not affiliated with the project [popcorn-time.ru](http://popcorn-time.ru/)
 
 ```
-$ USERNAME=username PASSWORD=password docker-compose up
+$ USERNAME=username PASSWORD=password docker-compose -f docker-compose.x86_64.yml up
+$ USERNAME=username PASSWORD=password docker-compose -f docker-compose.armhf.yml up
 ```
 
 ### Setup

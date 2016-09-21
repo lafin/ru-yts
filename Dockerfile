@@ -1,4 +1,4 @@
-FROM lafin/alpine:x86_64-v3.4
+FROM lafin/alpine:platform
 MAINTAINER Sergey Kuvakin (lafin)
 
 RUN adduser -D node
