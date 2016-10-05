@@ -15,7 +15,7 @@ var credential = require(process.env.DEV ? './secret' : './credential');
 var offset = 16;
 var needSaveItem = 0;
 
-var logInfoFile = fs.createWriteStream(__dirname + '/../info.log', {
+var logInfoFile = fs.createWriteStream(__dirname + '/../log/info.log', {
     flags: 'a'
 });
 var loggerInfo = new Logme({
@@ -23,17 +23,12 @@ var loggerInfo = new Logme({
     theme: 'clean'
 });
 
-var logErrorFile = fs.createWriteStream(__dirname + '/../error.log', {
+var logErrorFile = fs.createWriteStream(__dirname + '/../log/error.log', {
     flags: 'a'
 });
 var loggerError = new Logme({
     stream: logErrorFile,
     theme: 'clean'
-});
-
-var db = mongoose.connection;
-db.on('error', function(error) {
-    loggerError.error(error.message);
 });
 
 function requestLogin(callback) {
@@ -98,8 +93,12 @@ function getMagnet(film, callback) {
             sha1 = crypto.createHash('sha1');
         sha1.update(bencode.encode(metadata.info));
         film['hash'] = sha1.digest('hex');
-        film['size'] = metadata.info.length;
-        film['magnet'] = 'magnet:?xt=urn:btih:' + film['hash'] + '&dn=' + metadata.info.name + '&tr=' + metadata.announce;
+        if (metadata.info) {
+            film['size'] = metadata.info.length;
+            film['magnet'] = 'magnet:?xt=urn:btih:' + film['hash'] + '&dn=' + metadata.info.name + '&tr=' + metadata.announce;
+        } else {
+            film['magnet'] = null;
+        }
         return callback(null, film);
     });
 }

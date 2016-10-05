@@ -19,7 +19,7 @@ app.use(function(req, res, next) {
     next();
 });
 
-var logErrorFile = fs.createWriteStream(__dirname + '/../error.log', {
+var logErrorFile = fs.createWriteStream(__dirname + '/../log/error.log', {
     flags: 'a'
 });
 var logger = new Logme({
@@ -27,14 +27,20 @@ var logger = new Logme({
     theme: 'clean'
 });
 
-var logAccessFile = fs.createWriteStream(__dirname + '/../access.log', {
+var logAccessFile = fs.createWriteStream(__dirname + '/../log/access.log', {
     flags: 'a'
 });
 app.use(morgan('combined', {
     stream: logAccessFile
 }));
 
+mongoose.Promise = global.Promise;
 mongoose.connect(credential.db);
+
+var db = mongoose.connection;
+db.on('error', function(error) {
+    loggerError.error(error.message);
+});
 
 var genreKeywords = function(keywords) {
     return (function(keywords) {

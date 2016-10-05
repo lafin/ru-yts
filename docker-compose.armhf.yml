@@ -4,8 +4,10 @@ web:
     - "3000:3000"
   links:
     - "mongo"
+  volumes:
+    - "./log:/ru-yts-master/log"
 
 mongo:
   image: "partlab/ubuntu-arm-mongodb"
   volumes:
-    - "db:/data/db"
+    - "./db:/data/db"

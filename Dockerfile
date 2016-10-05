@@ -7,6 +7,7 @@ RUN apk add --no-cache nodejs openssl && \
   unzip -q master.zip && \
   rm master.zip
 RUN cd /ru-yts-master && npm i
+VOLUME /ru-yts-master/log
 
 EXPOSE 3000
 CMD ["node", "/ru-yts-master/server/app.js"]
