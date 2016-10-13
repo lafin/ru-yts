@@ -261,7 +261,7 @@ if (require.main === module) {
             if (config.tasks.hasOwnProperty(i)) {
                 var task = config.tasks[i];
                 var scheduler = later.parse.cron(task.cron, true);
-                later.setInterval(worker.start.bind(this, count ? task.total : 500, task.category), scheduler);
+                later.setInterval(worker.start.bind(this, count < 100 ? task.total : 2000, task.category), scheduler);
             }
         }
     });
