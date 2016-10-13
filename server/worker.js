@@ -242,27 +242,27 @@ function doAfterLogin(total, category) {
 
 var worker = module.exports = {
     start: function(total, category) {
-        total = total || 10;
-        category = category || 10;
-        return requestLogin(doAfterLogin.bind(this, total, category));
+        return getTotal(function(error, count) {
+            if (error) {
+                return logger.error(error);
+            }
+            total = total || 10;
+            category = category || 10;
+
+            return requestLogin(doAfterLogin.bind(this, count < 100 ? total : 2000, category));
+        });
     }
 };
 
 if (require.main === module) {
     worker.start(25, 10);
 } else {
-    return getTotal(function(error, count) {
-        if (error) {
-            return logger.error(error);
+    later.date.localTime();
+    for (var i in config.tasks) {
+        if (config.tasks.hasOwnProperty(i)) {
+            var task = config.tasks[i];
+            var scheduler = later.parse.cron(task.cron, true);
+            later.setInterval(worker.start.bind(this, task.total, task.category), scheduler);
         }
-
-        later.date.localTime();
-        for (var i in config.tasks) {
-            if (config.tasks.hasOwnProperty(i)) {
-                var task = config.tasks[i];
-                var scheduler = later.parse.cron(task.cron, true);
-                later.setInterval(worker.start.bind(this, count < 100 ? task.total : 2000, task.category), scheduler);
-            }
-        }
-    });
+    }
 }
