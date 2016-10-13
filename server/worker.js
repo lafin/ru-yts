@@ -2,34 +2,26 @@ var request = require('request');
 var bencode = require('bencode');
 var iconv = require('iconv-lite');
 var async = require('async');
-var mongoose = require('mongoose');
 var crypto = require('crypto');
 var Logme = require('logme').Logme;
 var fs = require('fs');
 var later = require('later');
 
-var Item = require('./models/Item');
 var config = require('./config');
 var credential = require(process.env.DEV ? './secret' : './credential');
 
 var offset = 16;
 var needSaveItem = 0;
 
-var logInfoFile = fs.createWriteStream(__dirname + '/../log/info.log', {
+var loggerFile = fs.createWriteStream(__dirname + '/../log/error.log', {
     flags: 'a'
 });
-var loggerInfo = new Logme({
-    stream: logInfoFile,
+var logger = new Logme({
+    stream: loggerFile,
     theme: 'clean'
 });
-
-var logErrorFile = fs.createWriteStream(__dirname + '/../log/error.log', {
-    flags: 'a'
-});
-var loggerError = new Logme({
-    stream: logErrorFile,
-    theme: 'clean'
-});
+require('./db')(logger);
+var Item = require('./models/Item');
 
 function requestLogin(callback) {
     var form = {
@@ -52,7 +44,7 @@ function requestLogin(callback) {
         encoding: null
     }, function(error) {
         if (error) {
-            return callback(error);
+            return logger.error(error);
         }
         return callback(null, true);
     });
@@ -89,8 +81,8 @@ function getMagnet(film, callback) {
             film['magnet'] = null;
             return callback(null, film);
         }
-        var metadata = bencode.decode(body),
-            sha1 = crypto.createHash('sha1');
+        var metadata = bencode.decode(body);
+        var sha1 = crypto.createHash('sha1');
         sha1.update(bencode.encode(metadata.info));
         film['hash'] = sha1.digest('hex');
         if (metadata.info) {
@@ -158,7 +150,7 @@ function getData(value) {
 function afterSave(lastItem, callback) {
     callback = callback || function() {};
     if (lastItem) {
-        loggerInfo.info('stop');
+        console.log('stop');
         return callback();
     }
 }
@@ -198,8 +190,9 @@ function doSave(films, callback) {
             });
             item.save(function(error) {
                 if (error) {
-                    loggerError.error(error.message);
+                    logger.error(error.message);
                 }
+
                 return afterSave(--needSaveItem === 0, callback);
             });
         }
@@ -220,46 +213,56 @@ function prepareAndSaveData(data, callback) {
     return doSave(films, callback);
 }
 
+function getTotal(callback) {
+    return Item.count({}, function(error, count) {
+        if (error) {
+            return callback(error);
+        }
+        return callback(null, count);
+    });
+}
+
+function afterRequestData(error, data) {
+    if (error) {
+        return logger.error(error);
+    }
+
+    return prepareAndSaveData(data);
+}
+
+function doAfterLogin(total, category) {
+    for (var page = 0; page < total; page += offset) {
+        console.log('start');
+        requestData({
+            page: page,
+            category: category
+        }, afterRequestData);
+    }
+}
+
 var worker = module.exports = {
     start: function(total, category) {
         total = total || 10;
         category = category || 10;
-        loggerInfo.info('start');
-        try {
-            return requestLogin(function(error, status) {
-                if (error) {
-                    throw error;
-                }
-                if (status) {
-                    for (var page = 0; page < total; page += offset) {
-                        var params = {
-                            page: page,
-                            category: category
-                        };
-                        requestData(params, function(error, data) {
-                            if (error) {
-                                throw error;
-                            }
-                            prepareAndSaveData(data);
-                        });
-                    }
-                }
-            });
-        } catch (error) {
-            loggerError.error(error.message);
-        }
+        return requestLogin(doAfterLogin.bind(this, total, category));
     }
 };
 
 if (require.main === module) {
     worker.start(25, 10);
 } else {
-    later.date.localTime();
-    for (var i in config.tasks) {
-        if (config.tasks.hasOwnProperty(i)) {
-            var task = config.tasks[i];
-            var scheduler = later.parse.cron(task.cron, true);
-            later.setInterval(worker.start.bind(this, task.total, task.category), scheduler);
+    return getTotal(function(error, count) {
+        if (error) {
+            return logger.error(error);
         }
-    }
+
+        later.date.localTime();
+        for (var i in config.tasks) {
+            if (config.tasks.hasOwnProperty(i)) {
+                var task = config.tasks[i];
+                var scheduler = later.parse.cron(task.cron, true);
+                later.setInterval(worker.start.bind(this, count ? task.total : 500, task.category), scheduler);
+            }
+        }
+    });
 }

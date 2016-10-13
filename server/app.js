@@ -1,11 +1,9 @@
 var express = require('express');
-var mongoose = require('mongoose');
 var Logme = require('logme').Logme;
 var fs = require('fs');
 var path = require('path');
 var morgan = require('morgan');
 
-var credential = require(process.env.DEV ? './secret' : './credential');
 var config = require('./config');
 var itemModel = require('./models/Item');
 require('./worker');
@@ -13,7 +11,6 @@ require('./worker');
 var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
-app.use(express['static'](path.join(__dirname, '../client')));
 app.use(function(req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
     next();
@@ -26,6 +23,7 @@ var logger = new Logme({
     stream: logErrorFile,
     theme: 'clean'
 });
+require('./db')(logger);
 
 var logAccessFile = fs.createWriteStream(__dirname + '/../log/access.log', {
     flags: 'a'
@@ -33,14 +31,6 @@ var logAccessFile = fs.createWriteStream(__dirname + '/../log/access.log', {
 app.use(morgan('combined', {
     stream: logAccessFile
 }));
-
-mongoose.Promise = global.Promise;
-mongoose.connect(credential.db);
-
-var db = mongoose.connection;
-db.on('error', function(error) {
-    loggerError.error(error.message);
-});
 
 var genreKeywords = function(keywords) {
     return (function(keywords) {
