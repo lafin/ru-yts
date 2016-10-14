@@ -9,10 +9,6 @@ var later = require('later');
 
 var config = require('./config');
 var credential = require(process.env.DEV ? './secret' : './credential');
-
-var offset = 16;
-var needSaveItem = 0;
-
 var loggerFile = fs.createWriteStream(__dirname + '/../log/error.log', {
     flags: 'a'
 });
@@ -147,55 +143,48 @@ function getData(value) {
     return record;
 }
 
-function afterSave(lastItem, callback) {
-    callback = callback || function() {};
-    if (lastItem) {
-        console.log('stop');
-        return callback();
-    }
+function doSave(film, callback) {
+    var md5 = crypto.createHash('md5');
+    var item = new Item({
+        title: film.title,
+        guid: md5.update(film.title).digest('hex'),
+        hash: film.hash,
+        info: {
+            description: film.description,
+            time: film.time,
+            genre: film.genre,
+            cover: film.cover,
+            size: film.size,
+            magnet: film.magnet,
+            year: film.year,
+            quality: film.quality,
+            rating: film.rating,
+            date: film.date,
+            seeders: 0,
+            leechers: 0
+        }
+    });
+    item.save(function(error) {
+        if (error) {
+            logger.error(error.message);
+        }
+        return callback(error);
+    });
 }
 
-function doSave(films, callback) {
-    async.mapLimit(films, 2, function(film, callback) {
-        return getMagnet(film, callback);
+function beforeSave(films, callback) {
+    return async.mapLimit(films, 5, function(film, innerCallback) {
+        return getMagnet(film, innerCallback);
     }, function() {
         films = films.filter(function(item) {
             return !!item.magnet && item.quality !== '3D';
         });
-        if (films.length === 0) {
-            return afterSave(true, callback);
-        }
-        needSaveItem = films.length;
-        for (var i = 0; i < films.length; i++) {
-            var film = films[i];
-            var md5 = crypto.createHash('md5');
-            var item = new Item({
-                title: film.title,
-                guid: md5.update(film.title).digest('hex'),
-                hash: film.hash,
-                info: {
-                    description: film.description,
-                    time: film.time,
-                    genre: film.genre,
-                    cover: film.cover,
-                    size: film.size,
-                    magnet: film.magnet,
-                    year: film.year,
-                    quality: film.quality,
-                    rating: film.rating,
-                    date: film.date,
-                    seeders: 0,
-                    leechers: 0
-                }
-            });
-            item.save(function(error) {
-                if (error) {
-                    logger.error(error.message);
-                }
 
-                return afterSave(--needSaveItem === 0, callback);
-            });
-        }
+        return async.mapSeries(films, function(film, secondInnerCallback) {
+            doSave(film, secondInnerCallback);
+        }, function() {
+            return callback(null);
+        });
     });
 }
 
@@ -210,7 +199,7 @@ function prepareAndSaveData(data, callback) {
             films.push(value);
         }
     }
-    return doSave(films, callback);
+    return beforeSave(films, callback);
 }
 
 function getTotal(callback) {
@@ -222,34 +211,40 @@ function getTotal(callback) {
     });
 }
 
-function afterRequestData(error, data) {
-    if (error) {
-        return logger.error(error);
-    }
-
-    return prepareAndSaveData(data);
-}
-
 function doAfterLogin(total, category) {
-    for (var page = 0; page < total; page += offset) {
+    var page = 0;
+    async.during(function (callback) {
+        return callback(null, page < total);
+    }, function (callback) {
         console.log('start');
         requestData({
             page: page,
             category: category
-        }, afterRequestData);
-    }
+        }, function(error, data) {
+            if (error) {
+                return logger.error(error);
+            }
+            return prepareAndSaveData(data, function () {
+                console.log('stop');
+                page += config.offset;
+                return callback();
+            });
+        });
+    }, function () {
+        console.log('done');
+    });
 }
 
 var worker = module.exports = {
     start: function(total, category) {
+        total = total || 10;
+        category = category || 10;
+
         return getTotal(function(error, count) {
             if (error) {
                 return logger.error(error);
             }
-            total = total || 10;
-            category = category || 10;
-
-            return requestLogin(doAfterLogin.bind(this, count < 100 ? total : 2000, category));
+            return requestLogin(doAfterLogin.bind(this, count > 100 ? total : 500, category));
         });
     }
 };

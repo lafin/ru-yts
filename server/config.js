@@ -40,12 +40,13 @@ module.exports = {
         'Ноя': 'Nov',
         'Дек': 'Dec'
     },
+    offset: 16,
     tasks: [{
-        cron: '0 */10 * * * *',
+        cron: '0 0 * * * *',
         total: 50,
         category: 10
     }, {
-        cron: '0 */15 * * * *',
+        cron: '0 30 * * * *',
         total: 50,
         category: 11
     }]
