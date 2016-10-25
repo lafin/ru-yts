@@ -26,28 +26,8 @@ module.exports = {
         'War': 'военный',
         'Western': 'вестерн'
     },
-    months: {
-        'Янв': 'Jan',
-        'Фев': 'Feb',
-        'Мар': 'Mar',
-        'Апр': 'Apr',
-        'Май': 'May',
-        'Июн': 'Jun',
-        'Июл': 'Jul',
-        'Авг': 'Aug',
-        'Сен': 'Sep',
-        'Окт': 'Oct',
-        'Ноя': 'Nov',
-        'Дек': 'Dec'
-    },
-    offset: 16,
     tasks: [{
         cron: '0 0 * * * *',
-        total: 50,
-        category: 10
-    }, {
-        cron: '0 30 * * * *',
-        total: 50,
-        category: 11
+        total: 3
     }]
 };

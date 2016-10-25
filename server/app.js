@@ -5,7 +5,7 @@ var path = require('path');
 var morgan = require('morgan');
 
 var config = require('./config');
-var itemModel = require('./models/Item');
+var Item = require('./models/Item');
 require('./worker');
 
 var app = express();
@@ -43,33 +43,32 @@ var genreKeywords = function(keywords) {
 };
 
 var templateRecord = function(item) {
-    var info = item.info;
     return {
-        imdb_code: item.guid,
+        imdb_code: item.id,
         title: item.title,
-        title_long: item.title,
-        year: info.year,
-        genres: info.genre.split(','),
-        rating: info.rating,
-        medium_cover_image: info.cover,
-        small_cover_image: info.cover,
-        synopsis: info.description,
-        runtime: info.time,
+        title_long: item.title + '(' + item.title2 + ')',
+        year: item.year,
+        genres: item.genres.split(','),
+        rating: item.rating,
+        medium_cover_image: item.image,
+        small_cover_image: item.image,
+        synopsis: item.description,
+        runtime: item.duration,
         state: 'ok',
         torrents: [{
-            url: info.magnet,
-            hash: item.hash,
-            quality: info.quality,
-            seeds: 0,
-            peers: 0,
-            size: info.size ? parseInt(info.size / 1024 / 1024, 10) + ' Mb' : null,
-            size_bytes: info.size
+            url: item.magnet,
+            // hash: item.hash,
+            // quality: item.quality,
+            // seeds: 0,
+            // peers: 0,
+            // size: item.size ? parseInt(item.size / 1024 / 1024, 10) + ' Mb' : null,
+            // size_bytes: item.size
         }]
     };
 };
 
 app.get('/', function(req, res) {
-    itemModel.count({}, function(error, count) {
+    Item.count({}, function(error, count) {
         if (error) {
             return logger.error(error);
         }
@@ -115,12 +114,12 @@ app.get('/api/v2/list_movies.json', function(req, res) {
         }
     }
 
-    return itemModel.count({}, function(error, count) {
+    return Item.count({}, function(error, count) {
         if (error) {
             return logger.error(error);
         }
 
-        itemModel
+        Item
             .aggregate()
             // .group({
             //     _id: '$guid',
