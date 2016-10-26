@@ -1,6 +1,10 @@
 language: bash
 services: docker
 
+branches:
+  only:
+    - master
+
 env:
   - ARCH=x86_64
   - ARCH=armhf
