@@ -44,6 +44,7 @@ var genreKeywords = function(keywords) {
 
 var templateRecord = function(item) {
     return {
+        id: item.id,
         imdb_code: item.id,
         title: item.title,
         title_long: item.title + '(' + item.title2 + ')',
@@ -57,12 +58,7 @@ var templateRecord = function(item) {
         state: 'ok',
         torrents: [{
             url: item.magnet,
-            // hash: item.hash,
-            // quality: item.quality,
-            // seeds: 0,
-            // peers: 0,
-            // size: item.size ? parseInt(item.size / 1024 / 1024, 10) + ' Mb' : null,
-            // size_bytes: item.size
+            hash: item.magnet ? item.magnet.match(/btih:(.*?)&/)[1] : null
         }]
     };
 };
@@ -85,7 +81,7 @@ app.get('/api/v2/list_movies.json', function(req, res) {
         genre = params.genre || 'All',
         query_term = params.query_term || false,
         filter = genre === 'All' ? {} : {
-            'info.genre': new RegExp(config.genres[genre], 'i')
+            'genres': new RegExp(config.genres[genre], 'i')
         },
         sort_by = {};
 
@@ -97,16 +93,16 @@ app.get('/api/v2/list_movies.json', function(req, res) {
     if (params.sort_by) {
         switch (params.sort_by) {
             case 'year':
-                params.sort_by = 'info.year';
+                params.sort_by = 'year';
                 break;
             case 'title':
                 params.sort_by = 'title';
                 break;
             case 'date_added':
-                params.sort_by = 'info.date';
+                params.sort_by = 'year';
                 break;
             default:
-                params.sort_by = 'info.date';
+                params.sort_by = 'year';
                 break;
         }
         if (params.sort_by) {
@@ -114,55 +110,32 @@ app.get('/api/v2/list_movies.json', function(req, res) {
         }
     }
 
-    return Item.count({}, function(error, count) {
-        if (error) {
-            return logger.error(error);
-        }
+    var count = 0;
+    return Item.aggregate()
+        .match(filter)
+        .skip(limit * (page - 1))
+        .limit(limit)
+        .sort(sort_by)
+        .exec(function(error, items) {
+            if (error) {
+                return logger.error(error);
+            }
 
-        Item
-            .aggregate()
-            // .group({
-            //     _id: '$guid',
-            //     year: {
-            //         $max: '$info.year'
-            //     },
-            //     torrents: {
-            //         $addToSet: {
-            //             hash: "$hash",
-            //             magnet: "$info.magnet",
-            //             quality: "$info.quality",
-            //             size: "$info.size"
-            //         }
-            //     }
-            // })
-            .match(filter)
-            .skip(limit * (page - 1))
-            .limit(limit)
-            .sort(sort_by)
-            .exec(function(error, items) {
-                if (error) {
-                    return logger.error(error);
+            var list = [];
+            for (var i = 0; i < items.length; i++) {
+                list.push(templateRecord(items[i]));
+                count++;
+            }
+
+            return res.json({
+                data: {
+                    movie_count: count,
+                    limit: limit,
+                    page_number: parseInt(page, 10),
+                    movies: list
                 }
-
-                var list = [],
-                    i = null;
-                for (i = 0; i < items.length; i++) {
-                    var item = items[i];
-                    list.push(templateRecord(item));
-                }
-
-                return res.json({
-                    status: 'ok',
-                    status_message: 'Query was successful',
-                    data: {
-                        movie_count: count,
-                        limit: limit,
-                        page_number: page,
-                        movies: list
-                    }
-                });
             });
-    });
+        });
 });
 
 var server = app.listen(3000, function() {

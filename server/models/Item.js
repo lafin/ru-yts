@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 
 var itemSchema = new mongoose.Schema({
-    id: Number,
+    id: String,
     magnet: String,
     image: String,
     title: String,

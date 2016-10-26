@@ -70,7 +70,7 @@ function getFilmData(id, path, callback) {
             title: value[2],
             title2: value[3],
             year: value[4],
-            rating: value[5],
+            rating: value[5] || 0,
             duration: duration,
             genres: genres,
             description: value[8],
@@ -80,9 +80,19 @@ function getFilmData(id, path, callback) {
 }
 
 function saveFilmData(film, callback) {
-    var item = new Item(film);
-    item.save(function (error) {
-        return callback(error);
+    if (!film.magnet) {
+        return callback();
+    }
+    Item.find({
+        id: film.id
+    }, function (error, items) {
+        if (!error && !items) {
+            var item = new Item(film);
+            item.save(function (error) {
+                return callback(error);
+            });
+        }
+        return callback();
     });
 }
 
@@ -132,6 +142,7 @@ function run(total) {
         });
     }, function (error) {
         if (error) {
+            console.error(error);
             return logger.error(error);
         }
         console.log('done');

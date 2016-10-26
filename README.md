@@ -4,9 +4,18 @@ ___
 
 ![](screenshot.png)
 
+### Install
 ```
-$ USERNAME=username PASSWORD=password docker-compose -f docker-compose.x86_64.yml up
-$ USERNAME=username PASSWORD=password docker-compose -f docker-compose.armhf.yml up
+$ mkdir db log
+$ curl -O https://raw.githubusercontent.com/lafin/ru-yts/master/docker-compose.x86_64.yml
+$ docker-compose -f docker-compose.x86_64.yml up
+```
+
+### Update
+```
+$ rm -rf ./log/* ./db/*
+$ docker-compose -f docker-compose.x86_64.yml pull
+$ docker-compose -f docker-compose.x86_64.yml up
 ```
 
 ### Setup
