@@ -99,10 +99,8 @@ app.get('/api/v2/list_movies.json', function(req, res) {
                 params.sort_by = 'title';
                 break;
             case 'date_added':
-                params.sort_by = 'year';
-                break;
             default:
-                params.sort_by = 'year';
+                params.sort_by = 'date';
                 break;
         }
         if (params.sort_by) {

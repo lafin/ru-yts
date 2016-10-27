@@ -33,6 +33,8 @@ function requestData(params, callback) {
 }
 
 function getFilmData(id, path, callback) {
+    // path = '/movie/916491-imperium';
+
     return request({
         url: credential.urlEndPoint + path,
         headers: {
@@ -45,8 +47,16 @@ function getFilmData(id, path, callback) {
         }
 
         body = body.replace(/(\n|\r|\t|\s)+/gm, ' ');
-        var re = new RegExp('<div class="plate head-plate">.*?(?:<a class="button middle rounded download zona-link".*?data-default="(.*?)".*?>.*?<\/a>.*?)?(?:<img src="(.*?)" alt=".*?" \/>.*?)?(?:<h1 class="module-header" itemprop="name">(.*?)<\/h1>.*?)?(?:<h2 itemprop="alternateName">(.*?)<\/h2>.*?)?<div class="specialty"> <div class="section numbers">.*?(?:<td class="value" itemprop="copyrightYear">(.*?)<\/td>.*?)?(?:<meta itemprop="ratingValue" content="(.*?)" \/>.*?)?(?:<td class="value" itemprop="duration" datetime=".*?">(.*?)<\/td>.*?)?(?:<td class="label">Жанр<\/td> <td class="value"> (.*?) <\/td>.*?)?(?:<\/table> <\/div>(.*?)<\/div> <\/div>.*?)?<\/div>(?:.*?video: "(.*?)")?', 'gm');
+        var re = new RegExp('<div class="plate head-plate">.*?(?:<a class="button middle rounded download zona-link".*?data-default="(.*?)".*?>.*?<\/a>.*?)?(?:<img src="(.*?)" alt=".*?" \/>.*?)?(?:<h1 class="module-header" itemprop="name">(.*?)<\/h1>.*?)?(?:<h2 itemprop="alternateName">(.*?)<\/h2>.*?)?<div class="specialty"> <div class="section numbers">.*?(?:<td class="value" itemprop="copyrightYear">(.*?)<\/td>.*?)?(?:<meta itemprop="ratingValue" content="(.*?)" \/>.*?)?(?:<td class="value" itemprop="duration" datetime=".*?">(.*?)<\/td>.*?)?(?:<td class="label">Жанр<\/td> <td class="value"> (.*?) <\/td>.*?)?(?:<\/table> <\/div>(.*?)<\/div> <\/div>.*?)?<\/div> <div class="plate list-start">.*?<tbody>(.*?)<\/tbody> <\/table> <\/div>.*?(?:.*?video: "(.*?)")?', 'gm');
         var value = re.exec(body).splice(1);
+
+        var torrents = [];
+        var torrent, torrentRe = new RegExp('<tr.*?class="item.*?">.*?<td class="column video">(.*?)<\/td>.*?<td class="column languages">(.*?)<\/td>.*?<td class="column seed-leech"> <span class="seed">(.*?)<\/span>.*?data-default="(.*?)".*?" title=".*?в (.*?) качестве".*?<\/tr>', 'gm');
+        while ((torrent = torrentRe.exec(value[9])) !== null) {
+            torrents.push(torrent.splice(1));
+        }
+        // console.log(torrents);
+
         var genre, genreRe = new RegExp('<span itemprop="genre">(.*?)</span>', 'gm');
         var genres = [];
         while ((genre = genreRe.exec(value[7])) !== null) {
@@ -74,7 +84,8 @@ function getFilmData(id, path, callback) {
             duration: duration,
             genres: genres,
             description: value[8],
-            trailer: value[9]
+            trailer: value[10],
+            date: Date.now()
         });
     });
 }
@@ -107,6 +118,7 @@ function getPageData(data, callback) {
             id: value[1],
             path: value[2]
         });
+        // break;
     }
 
     async.mapLimit(films, 20, function (film, innerCallback) {
@@ -157,7 +169,7 @@ var worker = module.exports = {
 };
 
 if (require.main === module) {
-    worker.start(2);
+    worker.start(1);
 } else {
     later.date.localTime();
     for (var i in config.tasks) {

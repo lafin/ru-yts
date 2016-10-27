@@ -11,7 +11,8 @@ var itemSchema = new mongoose.Schema({
     duration: Number,
     genres: String,
     description: String,
-    trailer: String
+    trailer: String,
+    date: Date
 });
 
 itemSchema.index({
