@@ -55,6 +55,7 @@ var templateRecord = function(item) {
         small_cover_image: item.image,
         synopsis: item.description,
         runtime: item.duration,
+        trailer: item.trailer,
         state: 'ok',
         torrents: [{
             url: item.magnet,
@@ -109,7 +110,8 @@ app.get('/api/v2/list_movies.json', function(req, res) {
     }
 
     var count = 0;
-    return Item.aggregate()
+    return Item
+        .aggregate()
         .match(filter)
         .skip(limit * (page - 1))
         .limit(limit)

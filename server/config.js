@@ -28,6 +28,6 @@ module.exports = {
     },
     tasks: [{
         cron: '0 0 * * * *',
-        total: 3
+        total: 1
     }]
 };

@@ -33,8 +33,6 @@ function requestData(params, callback) {
 }
 
 function getFilmData(id, path, callback) {
-    // path = '/movie/916491-imperium';
-
     return request({
         url: credential.urlEndPoint + path,
         headers: {
@@ -47,15 +45,27 @@ function getFilmData(id, path, callback) {
         }
 
         body = body.replace(/(\n|\r|\t|\s)+/gm, ' ');
-        var re = new RegExp('<div class="plate head-plate">.*?(?:<a class="button middle rounded download zona-link".*?data-default="(.*?)".*?>.*?<\/a>.*?)?(?:<img src="(.*?)" alt=".*?" \/>.*?)?(?:<h1 class="module-header" itemprop="name">(.*?)<\/h1>.*?)?(?:<h2 itemprop="alternateName">(.*?)<\/h2>.*?)?<div class="specialty"> <div class="section numbers">.*?(?:<td class="value" itemprop="copyrightYear">(.*?)<\/td>.*?)?(?:<meta itemprop="ratingValue" content="(.*?)" \/>.*?)?(?:<td class="value" itemprop="duration" datetime=".*?">(.*?)<\/td>.*?)?(?:<td class="label">Жанр<\/td> <td class="value"> (.*?) <\/td>.*?)?(?:<\/table> <\/div>(.*?)<\/div> <\/div>.*?)?<\/div> <div class="plate list-start">.*?<tbody>(.*?)<\/tbody> <\/table> <\/div>.*?(?:.*?video: "(.*?)")?', 'gm');
+        var re = new RegExp('<div class="plate head-plate">.*?(?:<a class="button middle rounded download zona-link".*?data-default="(.*?)".*?>.*?<\/a>.*?)?(?:<img src="(.*?)" alt=".*?" \/>.*?)?(?:<h1 class="module-header" itemprop="name">(.*?)<\/h1>.*?)?(?:<h2 itemprop="alternateName">(.*?)<\/h2>.*?)?<div class="specialty"> <div class="section numbers">.*?(?:<td class="value" itemprop="copyrightYear">(.*?)<\/td>.*?)?(?:<meta itemprop="ratingValue" content="(.*?)" \/>.*?)?(?:<td class="value" itemprop="duration" datetime=".*?">(.*?)<\/td>.*?)?(?:<td class="label">Жанр<\/td> <td class="value"> (.*?) <\/td>.*?)?(?:<\/table> <\/div>(.*?)<\/div> <\/div>.*?)?<\/div> <div class="plate list-start">.*?<h3 class="module-header">Торренты фильма.*?<\/h3>.*?<tbody>(.*?)<\/tbody>.*?<\/div>.*?(?:.*?video: "(.*?)")?', 'gm');
         var value = re.exec(body).splice(1);
 
         var torrents = [];
-        var torrent, torrentRe = new RegExp('<tr.*?class="item.*?">.*?<td class="column video">(.*?)<\/td>.*?<td class="column languages">(.*?)<\/td>.*?<td class="column seed-leech"> <span class="seed">(.*?)<\/span>.*?data-default="(.*?)".*?" title=".*?в (.*?) качестве".*?<\/tr>', 'gm');
+        var torrent, torrentRe = new RegExp('<tr.*?class="item.*?">.*?<td class="column video">(.*?)<\/td>.*?<td class="column languages">(.*?)<\/td>.*?<td class="column seed-leech"> <span class="seed">(.*?)<\/span>.*?data-default="(.*?)".*?" title=".*?\\(.*?\\) в (.*?) качестве".*?<\/tr>', 'gm');
         while ((torrent = torrentRe.exec(value[9])) !== null) {
             torrents.push(torrent.splice(1));
         }
-        // console.log(torrents);
+
+        torrents = torrents.filter(function(torrent) {
+            return (/ru/.test(torrent[1])) && !(/Blu\-ray/.test(torrent[4]));
+        }).sort(function(a, b) {
+            return (b[0].split('x').reduce(function(a1, b1) {
+                return a1 * b1;
+            })) - (a[0].split('x').reduce(function(a1, b1) {
+                return a1 * b1;
+            }));
+        }).slice(0, 5).sort(function(a, b) {
+            return b[2] - a[2];
+        });
+        var magnet = torrents[0];
 
         var genre, genreRe = new RegExp('<span itemprop="genre">(.*?)</span>', 'gm');
         var genres = [];
@@ -75,7 +85,7 @@ function getFilmData(id, path, callback) {
 
         return callback(null, {
             id: id,
-            magnet: value[0],
+            magnet: magnet,
             image: value[1],
             title: value[2],
             title2: value[3],
@@ -94,14 +104,16 @@ function saveFilmData(film, callback) {
     if (!film.magnet) {
         return callback();
     }
-    Item.find({
+    var options = {
+      new: true,
+      upsert: true,
+      setDefaultsOnInsert: true
+    };
+    Item.findOneAndUpdate({
         id: film.id
-    }, function (error, items) {
-        if (!error && !items) {
-            var item = new Item(film);
-            item.save(function (error) {
-                return callback(error);
-            });
+    }, film, options, function (error) {
+        if (error) {
+            return callback(error);
         }
         return callback();
     });
@@ -118,7 +130,6 @@ function getPageData(data, callback) {
             id: value[1],
             path: value[2]
         });
-        // break;
     }
 
     async.mapLimit(films, 20, function (film, innerCallback) {
@@ -169,7 +180,7 @@ var worker = module.exports = {
 };
 
 if (require.main === module) {
-    worker.start(1);
+    worker.start(2);
 } else {
     later.date.localTime();
     for (var i in config.tasks) {

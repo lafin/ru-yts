@@ -17,8 +17,6 @@ var itemSchema = new mongoose.Schema({
 
 itemSchema.index({
     'id': 1
-}, {
-    unique: true
 });
 
 module.exports = mongoose.model('Item', itemSchema);
