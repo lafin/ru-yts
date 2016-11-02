@@ -57,7 +57,7 @@ function getFilmData(id, path, callback) {
         }).slice(0, 5).sort(function (a, b) {
             return b[2] - a[2];
         });
-        var magnet = torrents[0];
+        var magnet = torrents[0] && torrents[0][3];
 
         var genre, genreRe = new RegExp('<span itemprop="genre">(.*?)</span>', 'gm');
         var genres = [];
