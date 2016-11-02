@@ -1,18 +1,10 @@
 var request = require('request');
 var async = require('async');
-var Logme = require('logme').Logme;
-var fs = require('fs');
 var later = require('later');
 
 var config = require('./config');
+var logger = require('./logger');
 var credential = require(process.env.DEV ? './secret' : './credential');
-var loggerFile = fs.createWriteStream(__dirname + '/../log/error.log', {
-    flags: 'a'
-});
-var logger = new Logme({
-    stream: loggerFile,
-    theme: 'clean'
-});
 require('./db')(logger);
 var Item = require('./models/Item');
 
@@ -54,15 +46,15 @@ function getFilmData(id, path, callback) {
             torrents.push(torrent.splice(1));
         }
 
-        torrents = torrents.filter(function(torrent) {
+        torrents = torrents.filter(function (torrent) {
             return (/ru/.test(torrent[1])) && !(/Blu\-ray/.test(torrent[4]));
-        }).sort(function(a, b) {
-            return (b[0].split('x').reduce(function(a1, b1) {
+        }).sort(function (a, b) {
+            return (b[0].split('x').reduce(function (a1, b1) {
                 return a1 * b1;
-            })) - (a[0].split('x').reduce(function(a1, b1) {
+            })) - (a[0].split('x').reduce(function (a1, b1) {
                 return a1 * b1;
             }));
-        }).slice(0, 5).sort(function(a, b) {
+        }).slice(0, 5).sort(function (a, b) {
             return b[2] - a[2];
         });
         var magnet = torrents[0];
@@ -105,9 +97,9 @@ function saveFilmData(film, callback) {
         return callback();
     }
     var options = {
-      new: true,
-      upsert: true,
-      setDefaultsOnInsert: true
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true
     };
     Item.findOneAndUpdate({
         id: film.id
@@ -180,7 +172,9 @@ var worker = module.exports = {
 };
 
 if (require.main === module) {
-    worker.start(2);
+    var args = process.argv;
+    var count = args[2] && args[2] === '-c' && args[3];
+    worker.start(count || 1);
 } else {
     later.date.localTime();
     for (var i in config.tasks) {
