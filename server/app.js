@@ -2,10 +2,12 @@ var express = require('express');
 var fs = require('fs');
 var path = require('path');
 var morgan = require('morgan');
+var later = require('later');
 
 var data = require('./controller/data');
 var logger = require('./logger');
-require('./worker');
+var worker = require('./worker');
+var config = require('./config');
 require('./db')(logger);
 
 var app = express();
@@ -26,6 +28,23 @@ app.use(morgan('combined', {
 app.get('/', data.index);
 app.get('/api/v2/list_movies.json', data.list);
 
-app.listen(3000, function() {
-    console.log('Listening on port %d', this.address().port);
-});
+var args = process.argv;
+var onlyWorker = args.indexOf('--only-worker') > -1;
+if (onlyWorker) {
+    var countIndex = args.indexOf('-c');
+    var count = countIndex > -1 ? args[countIndex + 1] : 1;
+    worker.start(count || 1, true);
+} else {
+    later.date.localTime();
+    for (var i in config.tasks) {
+        if (config.tasks.hasOwnProperty(i)) {
+            var task = config.tasks[i];
+            var scheduler = later.parse.cron(task.cron, true);
+            later.setInterval(worker.start.bind(this, task.total), scheduler);
+        }
+    }
+
+    app.listen(3000, function() {
+        console.log('Listening on port %d', this.address().port);
+    });
+}

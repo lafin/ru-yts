@@ -1,11 +1,10 @@
 var request = require('request');
 var async = require('async');
-var later = require('later');
 
 var config = require('./config');
 var logger = require('./logger');
 var credential = require(process.env.DEV ? './secret' : './credential');
-require('./db')(logger);
+var connect = require('./db')(logger);
 var Item = require('./models/Item');
 
 function requestData(params, callback) {
@@ -129,7 +128,8 @@ function getPageData(data, callback) {
     }, callback);
 }
 
-function run(total) {
+function run(total, done) {
+    done = done || function () {};
     var page = 1;
     async.during(function (callback) {
         return callback(null, page <= total);
@@ -161,27 +161,14 @@ function run(total) {
             return logger.error(error);
         }
         console.log('done');
+        done();
     });
 }
 
-var worker = module.exports = {
-    start: function (total) {
-        total = total || 1;
-        return run(total);
+module.exports = {
+    start: function (total, interruptConnectAfter) {
+        return run(total, interruptConnectAfter ? function () {
+            connect.close();
+        } : null);
     }
 };
-
-if (require.main === module) {
-    var args = process.argv;
-    var count = args[2] && args[2] === '-c' && args[3];
-    worker.start(count || 1);
-} else {
-    later.date.localTime();
-    for (var i in config.tasks) {
-        if (config.tasks.hasOwnProperty(i)) {
-            var task = config.tasks[i];
-            var scheduler = later.parse.cron(task.cron, true);
-            later.setInterval(worker.start.bind(this, task.total), scheduler);
-        }
-    }
-}

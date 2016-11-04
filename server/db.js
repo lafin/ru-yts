@@ -10,4 +10,6 @@ module.exports = function(logger) {
     connect.on('error', function(error) {
         return logger.error(error.message);
     });
+
+    return connect;
 };
