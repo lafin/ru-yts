@@ -14,10 +14,10 @@
     "iconv-lite": "^0.4.13",
     "later": "^1.2.0",
     "logme": "^0.4.0",
-    "mongoose": "^4.6.5",
+    "mongoose": "^4.6.6",
     "morgan": "^1.7.0",
     "parse-torrent": "^5.8.1",
     "pug": "^2.0.0-beta6",
-    "request": "^2.76.0"
+    "request": "^2.78.0"
   }
 }
