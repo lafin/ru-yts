@@ -1,61 +1,21 @@
 var request = require('request');
-var bencode = require('bencode');
-var iconv = require('iconv-lite');
 var async = require('async');
-var crypto = require('crypto');
-var Logme = require('logme').Logme;
-var fs = require('fs');
-var later = require('later');
 
 var config = require('./config');
+var logger = require('./logger');
 var credential = require(process.env.DEV ? './secret' : './credential');
-var loggerFile = fs.createWriteStream(__dirname + '/../log/error.log', {
-    flags: 'a'
-});
-var logger = new Logme({
-    stream: loggerFile,
-    theme: 'clean'
-});
-require('./db')(logger);
+var connect = require('./db')(logger);
 var Item = require('./models/Item');
 
-function requestLogin(callback) {
-    var form = {
-        username: credential.username,
-        password: credential.password,
-        autologin: 'on',
-        redirect: '',
-        login: credential.username
-    };
-    return request({
-        url: credential.urlEndPoint + 'login.php',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': config.userAgent
-        },
-        method: 'POST',
-        form: form,
-        jar: true,
-        followAllRedirects: true,
-        encoding: null
-    }, function(error) {
-        if (error) {
-            return logger.error(error);
-        }
-        return callback(null, true);
-    });
-}
-
 function requestData(params, callback) {
-    var url = credential.urlEndPoint + 'portal.php?c=' + params.category + '&start=' + params.page;
+    var url = credential.urlEndPoint + 'movies?page=' + params.page;
     return request({
         url: url,
         headers: {
             'User-Agent': config.userAgent
         },
-        jar: true,
-        encoding: null
-    }, function(error, response, body) {
+        jar: true
+    }, function (error, response, body) {
         if (error) {
             return callback(error);
         }
@@ -63,201 +23,152 @@ function requestData(params, callback) {
     });
 }
 
-function getMagnet(film, callback) {
+function getFilmData(id, path, callback) {
     return request({
-        url: credential.urlEndPoint + film['magnet'],
+        url: credential.urlEndPoint + path,
         headers: {
             'User-Agent': config.userAgent
         },
-        timeout: 10000,
-        jar: true,
-        encoding: null
-    }, function(error, response, body) {
+        jar: true
+    }, function (error, response, body) {
         if (error || response.statusCode !== 200) {
-            film['magnet'] = null;
-            return callback(null, film);
+            return callback(error || response.statusCode);
         }
-        var metadata = bencode.decode(body);
-        var sha1 = crypto.createHash('sha1');
-        sha1.update(bencode.encode(metadata.info));
-        film['hash'] = sha1.digest('hex');
-        if (metadata.info) {
-            film['size'] = metadata.info.length;
-            film['magnet'] = 'magnet:?xt=urn:btih:' + film['hash'] + '&dn=' + metadata.info.name + '&tr=' + metadata.announce;
-        } else {
-            film['magnet'] = null;
+
+        body = body.replace(/(\n|\r|\t|\s)+/gm, ' ');
+        var re = new RegExp('<div class="plate head-plate">.*?(?:<a class="button middle rounded download zona-link".*?data-default="(.*?)".*?>.*?<\/a>.*?)?(?:<img src="(.*?)" alt=".*?" \/>.*?)?(?:<h1 class="module-header" itemprop="name">(.*?)<\/h1>.*?)?(?:<h2 itemprop="alternateName">(.*?)<\/h2>.*?)?<div class="specialty"> <div class="section numbers">.*?(?:<td class="value" itemprop="copyrightYear">(.*?)<\/td>.*?)?(?:<meta itemprop="ratingValue" content="(.*?)" \/>.*?)?(?:<td class="value" itemprop="duration" datetime=".*?">(.*?)<\/td>.*?)?(?:<td class="label">Жанр<\/td> <td class="value"> (.*?) <\/td>.*?)?(?:<\/table> <\/div>(.*?)<\/div> <\/div>.*?)?<\/div> <div class="plate list-start">.*?<h3 class="module-header">Торренты фильма.*?<\/h3>.*?<tbody>(.*?)<\/tbody>.*?<\/div>.*?(?:.*?video: "(.*?)")?', 'gm');
+        var value = re.exec(body).splice(1);
+
+        var torrents = [];
+        var torrent, torrentRe = new RegExp('<tr.*?class="item.*?">.*?<td class="column video">(.*?)<\/td>.*?<td class="column languages">(.*?)<\/td>.*?<td class="column seed-leech"> <span class="seed">(.*?)<\/span>.*?data-default="(.*?)".*?" title=".*?\\(.*?\\) в (.*?) качестве".*?<\/tr>', 'gm');
+        while ((torrent = torrentRe.exec(value[9])) !== null) {
+            torrents.push(torrent.splice(1));
         }
-        return callback(null, film);
-    });
-}
 
-function getData(value) {
-    var record = {};
-
-    var title = value[0].match(/(.*?)\(.*?\)/i);
-    if (!title) {
-        return false;
-    }
-
-    // title
-    record['title'] = title[1].trim();
-
-    // get year
-    var re = /\(.*?\)/i;
-    re = re.exec(value[0]);
-    record['year'] = re ? re[0].replace(/[^\d.]/g, '').substr(0, 4) : '';
-
-    record['cover'] = value[3];
-
-    // description
-    record['description'] = value[4].replace(/&nbsp;\(<a href=".*?"> Читать дальше... <\/a>\)/gm, '.').replace(/&quot;/gm, '"');
-
-    // genre
-    record['genre'] = value[5].toLowerCase().split(', ');
-
-    // time
-    record['time'] = value[6].split(':').splice(0, 2).map(function(item, index) {
-        return index ? +item : item * 60;
-    }).reduce(function(previousValue, currentValue) {
-        return previousValue + currentValue;
-    });
-
-    // magnet
-    record['magnet'] = value[7];
-
-    // quality
-    var quality = value[0].match(/(3D|480p|720p|1080p|1080i)/i);
-    record['quality'] = (quality ? quality[1].replace('i', 'p') : 'HDRip');
-
-    // nnm-club's rating. x2 because nnm-club has five-point scale
-    var rating = parseFloat(value[2].trim().replace(',', '.'));
-    record['rating'] = (isNaN(rating) ? 0 : (rating * 2));
-
-    var date = value[1].trim();
-    for (var month in config.months) {
-        if (config.months.hasOwnProperty(month)) {
-            date = date.replace(month, config.months[month]);
-        }
-    }
-    record['date'] = +(new Date(date));
-    return record;
-}
-
-function doSave(film, callback) {
-    var md5 = crypto.createHash('md5');
-    var item = new Item({
-        title: film.title,
-        guid: md5.update(film.title).digest('hex'),
-        hash: film.hash,
-        info: {
-            description: film.description,
-            time: film.time,
-            genre: film.genre,
-            cover: film.cover,
-            size: film.size,
-            magnet: film.magnet,
-            year: film.year,
-            quality: film.quality,
-            rating: film.rating,
-            date: film.date,
-            seeders: 0,
-            leechers: 0
-        }
-    });
-    item.save(function(error) {
-        if (error) {
-            logger.error(error.message);
-        }
-        return callback(error);
-    });
-}
-
-function beforeSave(films, callback) {
-    return async.mapLimit(films, 5, function(film, innerCallback) {
-        return getMagnet(film, innerCallback);
-    }, function() {
-        films = films.filter(function(item) {
-            return !!item.magnet && item.quality !== '3D';
+        torrents = torrents.filter(function (torrent) {
+            return (/ru/.test(torrent[1])) && !(/Blu\-ray/.test(torrent[4]));
+        }).sort(function (a, b) {
+            return (b[0].split('x').reduce(function (a1, b1) {
+                return a1 * b1;
+            })) - (a[0].split('x').reduce(function (a1, b1) {
+                return a1 * b1;
+            }));
+        }).slice(0, 5).sort(function (a, b) {
+            return b[2] - a[2];
         });
+        var magnet = torrents[0] && torrents[0][3];
 
-        return async.mapSeries(films, function(film, secondInnerCallback) {
-            doSave(film, secondInnerCallback);
-        }, function() {
-            return callback(null);
+        var genre, genreRe = new RegExp('<span itemprop="genre">(.*?)</span>', 'gm');
+        var genres = [];
+        while ((genre = genreRe.exec(value[7])) !== null) {
+            genres = genres.concat(genre.splice(1));
+        }
+
+        var duration = 0;
+        if (value[6]) {
+            duration = value[6].split(':').map(Number).reduce(function (pre, cur, index) {
+                if (index === 1) {
+                    pre *= 60;
+                }
+                return pre + cur;
+            });
+        }
+
+        return callback(null, {
+            id: id,
+            magnet: magnet,
+            image: value[1],
+            title: value[2],
+            title2: value[3],
+            year: value[4],
+            rating: value[5] || 0,
+            duration: duration,
+            genres: genres,
+            description: value[8],
+            trailer: value[10],
+            date: Date.now()
         });
     });
 }
 
-function prepareAndSaveData(data, callback) {
-    var films = [];
-    data = iconv.decode(data, 'cp1251');
-    data = data.replace(/(\n|\r|\t|\s)+/gm, ' ');
-    var value, re = new RegExp('<table width=\"100%\" class=\"pline\">.*?<a.*?>(.*?)<\/a>.*?<span class=\"genmed\"> <b>.*?<\/b> \\\| (.*?)<\/span> \\\| <span class=\"tit\".*?Рейтинг: (.*?)".*?>.*?<var class=\"portalImg\".*?title=\"(.*?)\"><\/var><\/a>(.*?)<br \/><br \/>.*?<b>Жанр[ы]?<\/b>: (.*?)<br \/><b>.*?<br \/><b>Продолжительность<\/b>: (.*?)<\/span><\/td>.*?<div style=\"float:right\"><a href=\"(.*?)\" rel=\"nofollow\">.*?<\/table>', 'gm');
-    while ((value = re.exec(data)) !== null) {
-        value = getData(value.splice(1, 8));
-        if (value) {
-            films.push(value);
-        }
+function saveFilmData(film, callback) {
+    if (!film.magnet) {
+        return callback();
     }
-    return beforeSave(films, callback);
-}
-
-function getTotal(callback) {
-    return Item.count({}, function(error, count) {
+    var options = {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true
+    };
+    Item.findOneAndUpdate({
+        id: film.id
+    }, film, options, function (error) {
         if (error) {
             return callback(error);
         }
-        return callback(null, count);
+        return callback();
     });
 }
 
-function doAfterLogin(total, category) {
-    var page = 0;
+function getPageData(data, callback) {
+    var films = [];
+    data = data.toString().replace(/(\n|\r|\t|\s)+/gm, ' ');
+    var tilesRe = new RegExp('<div class="plate showcase">.*?<div class="tiles">(.*?)<\/div> <ul class="pagination">.*?<\/ul> <\/div>', 'gm');
+    var tiles = tilesRe.exec(data).splice(1);
+    var value, re = new RegExp('<div class="tile" data-movie-id="(.*?)"> <a target="_blank" href="(.*?)".*?>', 'gm');
+    while ((value = re.exec(tiles)) !== null) {
+        films.push({
+            id: value[1],
+            path: value[2]
+        });
+    }
+
+    async.mapLimit(films, 20, function (film, innerCallback) {
+        return getFilmData(film.id, film.path, innerCallback);
+    }, callback);
+}
+
+function run(total, done) {
+    done = done || function () {};
+    var page = 1;
     async.during(function (callback) {
-        return callback(null, page < total);
+        return callback(null, page <= total);
     }, function (callback) {
         console.log('start');
         requestData({
-            page: page,
-            category: category
-        }, function(error, data) {
+            page: page
+        }, function (error, data) {
             if (error) {
-                return logger.error(error);
+                return callback(error);
             }
-            return prepareAndSaveData(data, function () {
-                console.log('stop');
-                page += config.offset;
-                return callback();
+            return getPageData(data, function (error, films) {
+                if (error) {
+                    return callback(error);
+                }
+                async.mapSeries(films, saveFilmData, function (error) {
+                    if (error) {
+                        return callback(error);
+                    }
+                    console.log('stop');
+                    page += 1;
+                    return callback();
+                });
             });
         });
-    }, function () {
+    }, function (error) {
+        if (error) {
+            console.error(error);
+            return logger.error(error);
+        }
         console.log('done');
+        done();
     });
 }
 
-var worker = module.exports = {
-    start: function(total, category) {
-        total = total || 10;
-        category = category || 10;
-
-        return getTotal(function(error, count) {
-            if (error) {
-                return logger.error(error);
-            }
-            return requestLogin(doAfterLogin.bind(this, count > 100 ? total : 500, category));
-        });
+module.exports = {
+    start: function (total, interruptConnectAfter) {
+        return run(total, interruptConnectAfter ? function () {
+            connect.close();
+        } : null);
     }
 };
-
-if (require.main === module) {
-    worker.start(25, 10);
-} else {
-    later.date.localTime();
-    for (var i in config.tasks) {
-        if (config.tasks.hasOwnProperty(i)) {
-            var task = config.tasks[i];
-            var scheduler = later.parse.cron(task.cron, true);
-            later.setInterval(worker.start.bind(this, task.total, task.category), scheduler);
-        }
-    }
-}

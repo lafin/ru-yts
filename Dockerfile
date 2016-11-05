@@ -10,4 +10,5 @@ RUN cd /ru-yts-master && npm i
 VOLUME /ru-yts-master/log
 
 EXPOSE 3000
-CMD ["node", "/ru-yts-master/server/app.js"]
+ENTRYPOINT ["node", "/ru-yts-master/server/app.js"]
+CMD ["-c"]
