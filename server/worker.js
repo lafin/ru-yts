@@ -128,7 +128,7 @@ function getPageData(data, callback) {
         });
     }
 
-    async.mapLimit(films, 2, function (film, innerCallback) {
+    async.mapLimit(films, 1, function (film, innerCallback) {
         return getFilmData(film.id, film.path, innerCallback);
     }, callback);
 }
