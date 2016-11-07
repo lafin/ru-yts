@@ -53,9 +53,14 @@ function getFilmData(id, path, callback) {
             })) - (a[0].split('x').reduce(function (a1, b1) {
                 return a1 * b1;
             }));
-        }).slice(0, 5).sort(function (a, b) {
+        });
+
+        torrents = torrents.filter(function (torrent) {
+            return torrents[0][0] === torrent[0];
+        }).sort(function (a, b) {
             return b[2] - a[2];
         });
+
         var magnet = torrents[0] && torrents[0][3];
 
         var genre, genreRe = new RegExp('<span itemprop="genre">(.*?)</span>', 'gm');
@@ -123,51 +128,54 @@ function getPageData(data, callback) {
         });
     }
 
-    async.mapLimit(films, 20, function (film, innerCallback) {
+    async.mapLimit(films, 2, function (film, innerCallback) {
         return getFilmData(film.id, film.path, innerCallback);
     }, callback);
 }
 
-function run(total, done) {
+function run(total, offset, done) {
     done = done || function () {};
-    var page = 1;
+    total += offset;
+    var page = offset;
+
     async.during(function (callback) {
-        return callback(null, page <= total);
+        return callback(null, page < total);
     }, function (callback) {
-        console.log('start');
+        console.log('start page:', page);
         requestData({
             page: page
         }, function (error, data) {
             if (error) {
-                return callback(error);
+                console.error(error);
+                logger.error(error);
+                return callback();
             }
             return getPageData(data, function (error, films) {
                 if (error) {
-                    return callback(error);
+                    console.error(error);
+                    logger.error(error);
+                    return callback();
                 }
                 async.mapSeries(films, saveFilmData, function (error) {
                     if (error) {
-                        return callback(error);
+                        console.error(error);
+                        logger.error(error);
                     }
-                    console.log('stop');
+                    console.log('stop page:', page);
                     page += 1;
                     return callback();
                 });
             });
         });
-    }, function (error) {
-        if (error) {
-            console.error(error);
-            return logger.error(error);
-        }
+    }, function () {
         console.log('done');
         done();
     });
 }
 
 module.exports = {
-    start: function (total, interruptConnectAfter) {
-        return run(total, interruptConnectAfter ? function () {
+    start: function (total, offset, interruptConnectAfter) {
+        return run(total, offset, interruptConnectAfter ? function () {
             connect.close();
         } : null);
     }
