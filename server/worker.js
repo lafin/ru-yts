@@ -133,10 +133,10 @@ function getPageData(data, callback) {
     }, callback);
 }
 
-function run(total, offset, done) {
+function run(params, done) {
     done = done || function () {};
-    total += offset;
-    var page = offset;
+    var total = params.total + params.offset;
+    var page = params.offset;
 
     async.during(function (callback) {
         return callback(null, page < total);
@@ -174,8 +174,8 @@ function run(total, offset, done) {
 }
 
 module.exports = {
-    start: function (total, offset, interruptConnectAfter) {
-        return run(total, offset, interruptConnectAfter ? function () {
+    start: function (params, interruptConnectAfter) {
+        return run(params, interruptConnectAfter ? function () {
             connect.close();
         } : null);
     }
