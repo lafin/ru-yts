@@ -30,6 +30,7 @@ app.get('/api/v2/list_movies.json', data.list);
 
 var args = process.argv;
 var onlyWorker = args.indexOf('--only-worker') > -1;
+var onlyApi = args.indexOf('--only-api') > -1;
 var params = {};
 
 if (onlyWorker) {
@@ -42,17 +43,19 @@ if (onlyWorker) {
 
     worker.start(params, true);
 } else {
-    later.date.localTime();
-    for (var i in config.tasks) {
-        if (config.tasks.hasOwnProperty(i)) {
-            var task = config.tasks[i];
-            var scheduler = later.parse.cron(task.cron, true);
-            params = {
-                offset: 1,
-                total: task.total,
-                ttl: 86400
-            };
-            later.setInterval(worker.start.bind(this, params), scheduler);
+    if (!onlyApi) {
+        later.date.localTime();
+        for (var i in config.tasks) {
+            if (config.tasks.hasOwnProperty(i)) {
+                var task = config.tasks[i];
+                var scheduler = later.parse.cron(task.cron, true);
+                params = {
+                    offset: 1,
+                    total: task.total,
+                    ttl: 86400
+                };
+                later.setInterval(worker.start.bind(this, params), scheduler);
+            }
         }
     }
 
