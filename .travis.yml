@@ -20,5 +20,4 @@ script:
   - docker build -t lafin/ru-yts:${ARCH} ${ARCH}
 
 after_success:
-  - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
-  - docker push lafin/ru-yts
+  - if [[ $TRAVIS_PULL_REQUEST == 'false' ]]; then docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD" && docker push lafin/ru-yts; fi
