@@ -1,5 +1,5 @@
 var mongoose = require('mongoose');
-var credential = require(process.env.DEV ? './secret' : './credential');
+var credential = require('./credential');
 
 module.exports = function(logger) {
     var connect = mongoose.connection;

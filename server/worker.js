@@ -37,8 +37,11 @@ function getFilmData(id, path, callback) {
 
         body = body.replace(/(\n|\r|\t|\s)+/gm, ' ');
         var re = new RegExp('<div class="plate head-plate">.*?(?:<a class="button middle rounded download zona-link".*?data-default="(.*?)".*?>.*?<\/a>.*?)?(?:<img src="(.*?)" alt=".*?" \/>.*?)?(?:<h1 class="module-header" itemprop="name">(.*?)<\/h1>.*?)?(?:<h2 itemprop="alternateName">(.*?)<\/h2>.*?)?<div class="specialty"> <div class="section numbers">.*?(?:<td class="value" itemprop="copyrightYear">(.*?)<\/td>.*?)?(?:<meta itemprop="ratingValue" content="(.*?)" \/>.*?)?(?:<td class="value" itemprop="duration" datetime=".*?">(.*?)<\/td>.*?)?(?:<td class="label">Жанр<\/td> <td class="value"> (.*?) <\/td>.*?)?(?:<\/table> <\/div>(.*?)<\/div> <\/div>.*?)?<\/div> <div class="plate list-start">.*?<h3 class="module-header">Торренты фильма.*?<\/h3>.*?<tbody>(.*?)<\/tbody>.*?<\/div>.*?(?:.*?video: "(.*?)")?', 'gm');
-        var value = re.exec(body).splice(1);
-
+        var value = re.exec(body);
+        value = value && value.splice(1);
+        if (!value) {
+            return callback('No data');
+        }
         var torrents = [];
         var torrent, torrentRe = new RegExp('<tr.*?class="item.*?">.*?<td class="column video">(.*?)<\/td>.*?<td class="column languages">(.*?)<\/td>.*?<td class="column seed-leech"> <span class="seed">(.*?)<\/span>.*?data-default="(.*?)".*?" title=".*?\\(.*?\\) в (.*?) качестве".*?<\/tr>', 'gm');
         while ((torrent = torrentRe.exec(value[9])) !== null) {
@@ -119,7 +122,11 @@ function getPageData(data, callback) {
     var films = [];
     data = data.toString().replace(/(\n|\r|\t|\s)+/gm, ' ');
     var tilesRe = new RegExp('<div class="plate showcase">.*?<div class="tiles">(.*?)<\/div> <ul class="pagination">.*?<\/ul> <\/div>', 'gm');
-    var tiles = tilesRe.exec(data).splice(1);
+    var tiles = tilesRe.exec(data);
+    tiles = tiles && tiles.splice(1);
+    if (!tiles) {
+        return callback('No data');
+    }
     var value, re = new RegExp('<div class="tile" data-movie-id="(.*?)"> <a target="_blank" href="(.*?)".*?>', 'gm');
     while ((value = re.exec(tiles)) !== null) {
         films.push({
