@@ -3,7 +3,7 @@ var async = require('async');
 
 var config = require('./config');
 var logger = require('./logger');
-var credential = require(process.env.DEV ? './secret' : './credential');
+var credential = require('./credential');
 var connect = require('./db')(logger);
 var Item = require('./models/Item');
 
@@ -23,7 +23,10 @@ function requestData(params, callback) {
     });
 }
 
-function getFilmData(id, path, callback) {
+function getFilmData(params, callback) {
+    var id = params.id;
+    var path = params.path;
+
     return request({
         url: credential.urlEndPoint + path,
         headers: {
@@ -94,13 +97,37 @@ function getFilmData(id, path, callback) {
             genres: genres,
             description: value[8],
             trailer: value[10],
-            date: Date.now()
+            created: params.created,
+            updated: Date.now()
         });
     });
 }
 
+function checkFilmData(params, callback) {
+    var id = params.id;
+    var ttl = params.ttl;
+
+    Item.findOne({id: id}, function(error, data) {
+        if (error) {
+            return callback(error);
+        }
+        if (data) {
+            if (!data.updated || (new Date(data.updated).valueOf() + ttl) < Date.now()) {
+                params.created = data.created ? new Date(data.created).valueOf() : Date.now();
+                // update
+                return getFilmData(params, callback);
+            }
+            // skip
+            return callback();
+        }
+        params.created = Date.now();
+        // create new
+        return getFilmData(params, callback);
+    });
+}
+
 function saveFilmData(film, callback) {
-    if (!film.magnet) {
+    if (!film || !film.magnet) {
         return callback();
     }
     var options = {
@@ -118,7 +145,7 @@ function saveFilmData(film, callback) {
     });
 }
 
-function getPageData(data, callback) {
+function getPageData(data, ttl, callback) {
     var films = [];
     data = data.toString().replace(/(\n|\r|\t|\s)+/gm, ' ');
     var tilesRe = new RegExp('<div class="plate showcase">.*?<div class="tiles">(.*?)<\/div> <ul class="pagination">.*?<\/ul> <\/div>', 'gm');
@@ -136,7 +163,11 @@ function getPageData(data, callback) {
     }
 
     async.mapLimit(films, 1, function (film, innerCallback) {
-        return getFilmData(film.id, film.path, innerCallback);
+        return checkFilmData({
+            id: film.id,
+            path: film.path,
+            ttl: ttl
+        }, innerCallback);
     }, callback);
 }
 
@@ -144,6 +175,7 @@ function run(params, done) {
     done = done || function () {};
     var total = params.total + params.offset;
     var page = params.offset;
+    var ttl = params.ttl;
 
     async.during(function (callback) {
         return callback(null, page < total);
@@ -157,7 +189,7 @@ function run(params, done) {
                 logger.error(error);
                 return callback();
             }
-            return getPageData(data, function (error, films) {
+            return getPageData(data, ttl, function (error, films) {
                 if (error) {
                     console.error(error);
                     logger.error(error);
@@ -182,6 +214,7 @@ function run(params, done) {
 
 module.exports = {
     start: function (params, interruptConnectAfter) {
+        params.ttl *= 1e3;
         return run(params, interruptConnectAfter ? function () {
             connect.close();
         } : null);

@@ -71,7 +71,7 @@ module.exports = {
                     break;
                 case 'date_added':
                 default:
-                    params.sort_by = 'date';
+                    params.sort_by = 'created';
                     break;
             }
             if (params.sort_by) {
