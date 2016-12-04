@@ -91,7 +91,7 @@ module.exports = {
                     break;
             }
             if (params.sort_by) {
-                sort_by[params.sort_by] = params.order_by === 'desc' ? -1 : 1;
+                sort_by[params.sort_by] = params.order_by === 'asc' ? 1 : -1;
             }
         }
 
