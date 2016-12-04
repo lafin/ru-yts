@@ -51,6 +51,7 @@ function getFilmData(params, callback) {
             torrents.push(torrent.splice(1));
         }
 
+        var qualities = ['1080p', '720p', null];
         torrents = torrents.filter(function (torrent) {
             return (/ru/.test(torrent[1])) && !(/Blu\-ray/.test(torrent[4]));
         }).sort(function (a, b) {
@@ -59,15 +60,34 @@ function getFilmData(params, callback) {
             })) - (a[0].split('x').reduce(function (a1, b1) {
                 return a1 * b1;
             }));
-        });
-
-        torrents = torrents.filter(function (torrent) {
-            return torrents[0][0] === torrent[0];
         }).sort(function (a, b) {
             return b[2] - a[2];
+        }).map(function (torrent) {
+            var quality = parseInt(torrent[0].split('x')[1], 10);
+            if (quality > 650 && quality < 750) {
+                quality = '720p';
+            } else if (quality > 1000 && quality < 1100) {
+                quality = '1080p';
+            } else {
+                quality = null;
+            }
+            return {
+                quality: quality,
+                magnet: torrent[3]
+            };
+        }).filter(function (torrent) {
+            var index = qualities.indexOf(torrent.quality);
+            if (index > -1) {
+                qualities.splice(index, 1);
+            }
+            return index > -1;
         });
 
-        var magnet = torrents[0] && torrents[0][3];
+        if (torrents.length > 1) {
+            torrents = torrents.filter(function (torrent) {
+                return torrent.quality !== null;
+            });
+        }
 
         var genre, genreRe = new RegExp('<span itemprop="genre">(.*?)</span>', 'gm');
         var genres = [];
@@ -87,7 +107,7 @@ function getFilmData(params, callback) {
 
         return callback(null, {
             id: id,
-            magnet: magnet,
+            torrents: torrents,
             image: value[1],
             title: value[2],
             title2: value[3],
@@ -127,7 +147,7 @@ function checkFilmData(params, callback) {
 }
 
 function saveFilmData(film, callback) {
-    if (!film || !film.magnet) {
+    if (!film || !film.torrents.length) {
         return callback();
     }
     var options = {

@@ -2,7 +2,12 @@ var mongoose = require('mongoose');
 
 var itemSchema = new mongoose.Schema({
     id: String,
+    // back compatibility field
     magnet: String,
+    torrents: [{
+        magnet: String,
+        quality: String
+    }],
     image: String,
     title: String,
     title2: String,

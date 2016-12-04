@@ -12,7 +12,26 @@ var genreKeywords = function(keywords) {
     }(keywords.split('% '))).replace(/(е|ё)/i, '(е|ё)');
 };
 
+var templateTorrentRecord = function(item) {
+    var torrent = {
+        url: item.magnet,
+        hash: item.magnet ? item.magnet.match(/btih:(.*?)&/)[1] : null
+    };
+    if (item.quality) {
+        torrent.quality = item.quality;
+    }
+    return torrent;
+};
+
 var templateRecord = function(item) {
+    var torrents = [];
+    if (item.torrents) {
+        torrents = item.torrents.map(function (torrent) {
+            return templateTorrentRecord(torrent);
+        });
+    } else if (item.magnet) {
+        torrents = templateTorrentRecord(item);
+    }
     return {
         id: item.id,
         imdb_code: item.id,
@@ -27,10 +46,7 @@ var templateRecord = function(item) {
         runtime: item.duration,
         trailer: item.trailer,
         state: 'ok',
-        torrents: [{
-            url: item.magnet,
-            hash: item.magnet ? item.magnet.match(/btih:(.*?)&/)[1] : null
-        }]
+        torrents: torrents
     };
 };
 
