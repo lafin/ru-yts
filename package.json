@@ -14,7 +14,7 @@
     "iconv-lite": "^0.4.15",
     "later": "^1.2.0",
     "logme": "^0.4.0",
-    "mongoose": "^4.7.1",
+    "mongoose": "^4.7.2",
     "morgan": "^1.7.0",
     "parse-torrent": "^5.8.1",
     "pug": "^2.0.0-beta6",

@@ -85,6 +85,9 @@ module.exports = {
                 case 'title':
                     params.sort_by = 'title';
                     break;
+                case 'rating':
+                    params.sort_by = 'rating';
+                    break;
                 case 'date_added':
                 default:
                     params.sort_by = 'created';
