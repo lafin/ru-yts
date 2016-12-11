@@ -2,7 +2,8 @@
 [![Build Status](https://travis-ci.org/lafin/ru-yts.svg?branch=master)](https://travis-ci.org/lafin/ru-yts)
 ___
 
-![](screenshot.png)
+![](s.png)
+![](s1.png)
 
 ### Install
 Need install [Docker](https://docs.docker.com/compose/install/)
