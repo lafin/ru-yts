@@ -1,4 +1,4 @@
-FROM lafin/alpine:platform
+FROM multiarch/alpine:platform
 MAINTAINER Sergey Kuvakin (lafin)
 
 RUN adduser -D node
