@@ -33,6 +33,8 @@ var onlyWorker = args.indexOf('--only-worker') > -1;
 var onlyApi = args.indexOf('--only-api') > -1;
 var params = {};
 
+process.on('unhandledRejection', console.error);
+
 if (onlyWorker) {
     var totalIndex = args.indexOf('-c');
     params.total = totalIndex > -1 ? +args[totalIndex + 1] : 1;

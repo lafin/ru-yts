@@ -32,6 +32,9 @@ var templateRecord = function(item) {
     } else if (item.magnet) {
         torrents = templateTorrentRecord(item);
     }
+    if (item.storedImage) {
+        item.image = 'data:' + item.storedImage.contentType + ';base64,' + item.storedImage.data.toString('base64');
+    }
     return {
         id: item.id,
         imdb_code: item.id,
