@@ -8,6 +8,10 @@ var itemSchema = new mongoose.Schema({
         magnet: String,
         quality: String
     }],
+    storedImage: {
+        data: Buffer,
+        contentType: String
+    },
     image: String,
     title: String,
     title2: String,

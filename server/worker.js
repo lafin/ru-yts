@@ -105,10 +105,11 @@ function getFilmData(params, callback) {
             });
         }
 
-        return callback(null, {
+        var image = value[1];
+        var filmData = {
             id: id,
             torrents: torrents,
-            image: value[1],
+            image: image,
             title: value[2],
             title2: value[3],
             year: value[4],
@@ -119,7 +120,24 @@ function getFilmData(params, callback) {
             trailer: value[10],
             created: params.created,
             updated: Date.now()
-        });
+        };
+
+        if (image && params.needSaveImage) {
+            request({
+                url: image,
+                encoding: 'binary'
+            }, function (error, response, body) {
+                if (!error && response.statusCode === 200) {
+                    filmData.storedImage = {
+                        data: new Buffer(body, 'binary'),
+                        contentType: response.headers['content-type']
+                    };
+                }
+                return callback(null, filmData);
+            });
+        } else {
+            return callback(null, filmData);
+        }
     });
 }
 
@@ -141,6 +159,7 @@ function checkFilmData(params, callback) {
             return callback();
         }
         params.created = Date.now();
+        params.needSaveImage = true;
         // create new
         return getFilmData(params, callback);
     });
@@ -186,7 +205,8 @@ function getPageData(data, ttl, callback) {
         return checkFilmData({
             id: film.id,
             path: film.path,
-            ttl: ttl
+            ttl: ttl,
+            needSaveImage: null
         }, innerCallback);
     }, callback);
 }
