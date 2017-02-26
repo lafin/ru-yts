@@ -27,6 +27,7 @@ app.use(morgan('combined', {
 
 app.get('/', data.index);
 app.get('/api/v2/list_movies.json', data.list);
+app.get('/api/v2/movie_details.json', data.one);
 
 var args = process.argv;
 var onlyWorker = args.indexOf('--only-worker') > -1;

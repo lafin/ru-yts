@@ -23,7 +23,8 @@ var templateTorrentRecord = function(item) {
     return torrent;
 };
 
-var templateRecord = function(item) {
+var templateRecord = function(item, withImage) {
+    withImage = withImage !== false;
     var torrents = [];
     if (item.torrents) {
         torrents = item.torrents.map(function (torrent) {
@@ -32,10 +33,7 @@ var templateRecord = function(item) {
     } else if (item.magnet) {
         torrents = templateTorrentRecord(item);
     }
-    if (item.storedImage) {
-        item.image = 'data:' + item.storedImage.contentType + ';base64,' + item.storedImage.data.toString('base64');
-    }
-    return {
+    var response = {
         id: item.id,
         imdb_code: item.id,
         title: item.title,
@@ -43,14 +41,22 @@ var templateRecord = function(item) {
         year: item.year,
         genres: item.genres.split(','),
         rating: item.rating,
-        medium_cover_image: item.image,
-        small_cover_image: item.image,
         synopsis: item.description,
         runtime: item.duration,
         trailer: item.trailer,
         state: 'ok',
         torrents: torrents
     };
+    if (withImage) {
+        if (item.storedImage && item.storedImage.data) {
+            item.image = 'data:' + item.storedImage.contentType + ';base64,' + item.storedImage.data.toString('base64');
+        }
+        response = Object.assign({}, response, {
+            medium_cover_image: item.image,
+            small_cover_image: item.image
+        });
+    }
+    return response;
 };
 
 module.exports = {
@@ -61,6 +67,28 @@ module.exports = {
             }
             return res.render('index', {
                 count: count
+            });
+        });
+    },
+    one: function(req, res) {
+        var params = req.query;
+        var movie_id = ~~params.movie_id || null;
+        var withImage = params.with_images || false;
+
+        Item.findOne({id: movie_id}, function(error, item) {
+            if (error || !item) {
+                return res.json({
+                    'status': 'error'
+                });
+            }
+            item = templateRecord(item, withImage);
+            item.torrents = {
+                torrent: item.torrents
+            };
+            return res.json({
+                'status': 'ok',
+                'status_message': 'Query was successful',
+                'data': item
             });
         });
     },
