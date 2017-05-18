@@ -30,7 +30,7 @@ $ docker run --rm --link yts_mongo_1:mongo lafin/ru-yts:x86_64 --only-worker -c 
 * you can set ttl `--ttl` by default 86400 seconds
 
 ### Setup
-Download last version Popcorn Time [here](https://popcorntime.sh) Into the setting of Popcorn Time need set address for you yts server (eg. Movie API Endpoint: http://127.0.0.1:3000/)
+Download last version Popcorn Time [here](http://popcorn-time.is) Into the setting of Popcorn Time need set address for you yts server (eg. Movie API Endpoint: http://127.0.0.1:3000/)
 
 ### Contributors
 
