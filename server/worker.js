@@ -1,5 +1,7 @@
 var request = require('request');
 var async = require('async');
+var url = require('url');
+var Agent = require('socks5-http-client/lib/Agent');
 
 var config = require('./config');
 var logger = require('./logger');
@@ -7,15 +9,31 @@ var credential = require('./credential');
 var connect = require('./db')(logger);
 var Item = require('./models/Item');
 
+function getSocks5Config(socks5) {
+    if (socks5) {
+        socks5 = url.parse(socks5);
+        return {
+            agentClass: Agent,
+            agentOptions: {
+                socksHost: socks5.hostname,
+                socksPort: socks5.port
+            }
+        };
+    }
+    return {};
+}
+
 function requestData(params, callback) {
     var url = credential.urlEndPoint + 'movies?page=' + params.page;
-    return request({
+    var socks5 = getSocks5Config(params.socks5);
+
+    return request(Object.assign({}, {
         url: url,
         headers: {
             'User-Agent': config.userAgent
         },
         jar: true
-    }, function (error, response, body) {
+    }, socks5), function (error, response, body) {
         if (error) {
             return callback(error);
         }
@@ -26,14 +44,15 @@ function requestData(params, callback) {
 function getFilmData(params, callback) {
     var id = params.id;
     var path = params.path;
+    var socks5 = getSocks5Config(params.socks5);
 
-    return request({
+    return request(Object.assign({}, {
         url: credential.urlEndPoint + path,
         headers: {
             'User-Agent': config.userAgent
         },
         jar: true
-    }, function (error, response, body) {
+    }, socks5), function (error, response, body) {
         if (error || response.statusCode !== 200) {
             return callback(error || response.statusCode);
         }
@@ -123,10 +142,10 @@ function getFilmData(params, callback) {
         };
 
         if (image && params.needSaveImage) {
-            request({
+            request(Object.assign({}, {
                 url: image,
                 encoding: 'binary'
-            }, function (error, response, body) {
+            }, socks5), function (error, response, body) {
                 if (!error && response.statusCode === 200) {
                     filmData.storedImage = {
                         data: new Buffer(body, 'binary'),
@@ -184,7 +203,11 @@ function saveFilmData(film, callback) {
     });
 }
 
-function getPageData(data, ttl, callback) {
+function getPageData(params, callback) {
+    var data = params.data;
+    var ttl = params.ttl;
+    var socks5 = params.socks5;
+
     var films = [];
     data = data.toString().replace(/(\n|\r|\t|\s)+/gm, ' ');
     var tilesRe = new RegExp('<div class="plate showcase">.*?<div class="tiles">(.*?)<\/div> <ul class="pagination">.*?<\/ul> <\/div>', 'gm');
@@ -206,7 +229,8 @@ function getPageData(data, ttl, callback) {
             id: film.id,
             path: film.path,
             ttl: ttl,
-            needSaveImage: null
+            needSaveImage: null,
+            socks5: socks5
         }, innerCallback);
     }, callback);
 }
@@ -216,20 +240,26 @@ function run(params, done) {
     var total = params.total + params.offset;
     var page = params.offset;
     var ttl = params.ttl;
+    var socks5 = params.socks5;
 
     async.during(function (callback) {
         return callback(null, page < total);
     }, function (callback) {
         console.log('start page:', page);
         requestData({
-            page: page
+            page: page,
+            socks5: socks5
         }, function (error, data) {
             if (error) {
                 console.error(error);
                 logger.error(error);
                 return callback();
             }
-            return getPageData(data, ttl, function (error, films) {
+            return getPageData({
+                data: data,
+                ttl: ttl,
+                socks5: socks5
+            }, function (error, films) {
                 if (error) {
                     console.error(error);
                     logger.error(error);
