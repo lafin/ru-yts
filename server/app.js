@@ -43,6 +43,8 @@ if (onlyWorker) {
     params.offset = offsetIndex > -1 ? +args[offsetIndex + 1] : 1;
     var ttlIndex = args.indexOf('--ttl');
     params.ttl = ttlIndex > -1 ? +args[ttlIndex + 1] : 86400;
+    var socks5Index = args.indexOf('--socks5');
+    params.socks5 = socks5Index > -1 ? +args[socks5Index + 1] : null;
 
     worker.start(params, true);
 } else {

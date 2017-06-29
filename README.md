@@ -28,6 +28,7 @@ $ docker run --rm --link yts_mongo_1:mongo lafin/ru-yts:x86_64 --only-worker -c 
 * `-c` count page (I'm not recommend set more then 100) by default 1
 * you can set number of page from which start parsing with use the `-s` by default 1
 * you can set ttl `--ttl` by default 86400 seconds
+* you can set socks5 proxy `--socks5`
 
 ### Setup
 Download last version Popcorn Time [here](http://popcorn-time.is) Into the setting of Popcorn Time need set address for you yts server (eg. Movie API Endpoint: http://127.0.0.1:3000/)
